@@ -83,8 +83,8 @@ def percentile(values: list[float], fraction: float) -> float:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--labels", type=Path, default=Path("labels.csv"))
-    parser.add_argument("--predictions", type=Path, default=Path("artifacts/live/predictions.csv"))
-    parser.add_argument("--audit", type=Path, default=Path("artifacts/live/audit.json"))
+    parser.add_argument("--predictions", type=Path, default=Path("artifacts/provided_predictions.csv"))
+    parser.add_argument("--audit", type=Path, default=Path("artifacts/provided_audit.json"))
     parser.add_argument("--json-output", type=Path, default=Path("artifacts/evaluation.json"))
     parser.add_argument("--markdown-output", type=Path, default=Path("docs/EVALUATION.md"))
     parser.add_argument("--experiment-id", default=None)

@@ -5,12 +5,18 @@ accepts a ZIP or browser-selected folder containing audio plus `labels.csv`, val
 processes valid files independently with a hybrid Gemini/local pipeline, shows progress and per-file errors,
 and exports the required `name,result_json` CSV.
 
+## Live assessment
+
+The reviewer deployment is available at <https://autoace.omerkhalil.com>. Sign in as `evaluator`; the
+password is shared out of band and is never committed. A concise reviewer walkthrough and the evidence
+map for every requested deliverable are in [docs/SUBMISSION.md](docs/SUBMISSION.md).
+
 ## Quick start
 
 Prerequisites: Python 3.10+, `ffmpeg`/`ffprobe`, and a Gemini API key.
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
 cp .env.example .env
@@ -69,8 +75,10 @@ Every prediction contains exactly:
 The generated evaluation report is in [docs/EVALUATION.md](docs/EVALUATION.md), the full experiment ledger
 is in [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md), the experiment narrative is in
 [docs/TECHNICAL_MEMO.md](docs/TECHNICAL_MEMO.md), and the final supplied-call output is
-[artifacts/provided_predictions.csv](artifacts/provided_predictions.csv). Architecture, risks, deployment,
-and operational decisions are documented under `docs/`.
+[artifacts/provided_predictions.csv](artifacts/provided_predictions.csv), with its redacted reproducibility
+record in [artifacts/provided_audit.json](artifacts/provided_audit.json). Architecture, risks, deployment,
+and operational decisions are documented under `docs/`. The sample is only three calls, so its metrics are
+reported as smoke evidence rather than a generalization claim.
 
 ## Commands
 

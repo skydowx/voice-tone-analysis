@@ -50,6 +50,11 @@ or application behavior. Deploy a new immutable image and restart the existing V
 deploy/gcp/redeploy.sh
 ```
 
+The current assessment deployment is live at <https://autoace.omerkhalil.com> on an `e2-small` VM in
+`us-east1-b`, with Caddy-managed HTTPS and one application worker. The Gemini key, evaluator password, and
+session secret are stored in Secret Manager. Before sharing credentials, verify the API key belongs to an
+active-billing Cloud project so the paid-service data terms described in [Security](SECURITY.md) apply.
+
 ## Cloud Run smoke deployment
 
 `deploy/cloudrun.sh` builds and deploys a single instance with background CPU enabled. Before running it,
@@ -59,8 +64,8 @@ create Artifact Registry and these Secret Manager secrets:
 - `autoace-password-hash`
 - `autoace-session-secret`
 
-Then set `GCP_PROJECT_ID` and optionally `GCP_REGION`. The script has deliberately not been run because no
-GCP project is configured yet.
+Then set `GCP_PROJECT_ID` and optionally `GCP_REGION`. This path is included as an alternative but is not used
+for the assessment deployment because its ephemeral filesystem does not meet the review/retry requirement.
 
 Cloud Run's local filesystem is ephemeral. This option is suitable for a live review smoke test, not durable
 retention. A production Cloud Run migration should move batch rows to Postgres/Cloud SQL and uploads to

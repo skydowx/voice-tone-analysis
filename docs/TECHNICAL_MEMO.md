@@ -71,9 +71,26 @@ input token is conservatively charged at the audio-input rate. Both provider cal
 names use deliberately conservative fallback prices so configuration drift cannot silently under-report cost.
 The evaluator fails if either the aggregate or any individual clip exceeds $0.003/audio minute.
 
-The measured 24.12-second sequential runtime corresponds to 0.10x real time. The application uses two bounded
-workers by default, which reduces normal batch wall time while limiting API concurrency. Individual media or
-provider failures are persisted per item and do not abort valid siblings.
+The measured 24.12-second sequential runtime corresponds to 0.10x real time. Local configuration defaults to
+two bounded workers. The hosted assessment intentionally uses one worker because SQLite and a small `e2-small`
+VM favor predictable resource use over throughput. Individual media or provider failures are persisted per
+item and do not abort valid siblings.
+
+## External API disclosure
+
+Both model passes send the normalized call audio inline to the Gemini Developer API, so audio leaves the
+AutoAce-hosted GCP VM and is processed by Google. The application does not use the Gemini Files API, cached
+content, grounding, or model training. It never sends filenames or supplied labels to Gemini. The first
+response contains an ephemeral redacted transcript that is consumed only by local rules and is not included
+in the second provider request.
+
+The cost calculation assumes the paid Gemini 3.1 Flash-Lite rates used during the final run: $0.50 per
+million audio-input tokens and $1.50 per million output tokens, including thinking tokens. Provider-reported
+token counts drive the per-item estimate; all input tokens are conservatively charged at the audio rate.
+Under Google's paid-service terms, prompts, files, and responses are not used to improve Google products,
+although Google may retain abuse-monitoring logs for a limited period and transiently cache or process data
+in countries where it maintains facilities. See [Security and privacy](SECURITY.md) for the complete data
+flow and retention commitment.
 
 ## Failure modes and next steps
 

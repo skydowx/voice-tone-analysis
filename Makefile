@@ -1,20 +1,24 @@
 .PHONY: install test run live-eval evaluate docker-up
 
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+
 install:
-	python -m pip install -e '.[dev]'
+	$(PYTHON) -m pip install -e '.[dev]'
 
 test:
-	python -m pytest --cov=app --cov-report=term-missing
+	$(PYTHON) -m pytest --cov=app --cov-report=term-missing
 
 run:
-	uvicorn app.main:app --reload --host 127.0.0.1 --port 8080
+	$(PYTHON) -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8080
 
 live-eval:
-	python scripts/run_live_evaluation.py
-	python scripts/evaluate_predictions.py
+	$(PYTHON) scripts/run_live_evaluation.py
+	$(PYTHON) scripts/evaluate_predictions.py \
+		--predictions artifacts/live/predictions.csv \
+		--audit artifacts/live/audit.json
 
 evaluate:
-	python scripts/evaluate_predictions.py
+	$(PYTHON) scripts/evaluate_predictions.py
 
 docker-up:
 	docker compose up --build

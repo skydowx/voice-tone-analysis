@@ -21,9 +21,22 @@
 
 ## Backups and deletion
 
-For Compose/VM deployment, back up the named data volume if results must be retained. To meet a deletion
-request, remove the relevant upload directory and batch database records, or destroy the evaluation volume
-after exporting the final result. Never copy `.env`, raw call audio, or `artifacts/live/` into source control.
+For Compose/VM deployment, back up the named data volume only if the reviewer requests retained results.
+No later than seven days after written confirmation that review is complete, export any specifically
+requested artifact and then remove the assessment data on the VM:
+
+```bash
+gcloud compute ssh autoace-app \
+  --zone us-east1-b \
+  --tunnel-through-iap \
+  --project autoace-assessment \
+  --command 'sudo docker rm --force autoace-app && sudo docker volume rm autoace-data'
+```
+
+This is destructive: it removes all uploaded calls, job records, and generated artifacts. The container can
+be recreated by rerunning the startup script, but deleted assessment data cannot be recovered unless it was
+separately backed up. Delete any requested backup on the same schedule. Never copy `.env`, raw call audio, or
+`artifacts/live/` into source control.
 
 ## Release checks
 

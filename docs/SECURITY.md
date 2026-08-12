@@ -17,13 +17,38 @@
 
 ## Data flow and retention
 
+Each original upload is stored on the VM's persistent Docker volume for review, retry, and artifact download.
 Normalized WAV is created in a temporary directory and deleted immediately after each inference call.
 Ephemeral transcript text becomes unreachable when that item completes; audit records contain only aggregate
-turn counts and emotion-evidence scores.
-Original uploaded clips remain under the configured data directory to support audit/retry. They are not
-committed to source control. For an evaluation deployment, delete the persistent volume after review or
-apply an agreed short retention window. Provider request logs and retention are governed by the selected
-Gemini paid-service terms.
+turn counts and emotion-evidence scores. No call audio, transcript, or live job database is committed to the
+repository.
+
+For this assessment deployment, uploads are retained only through the review period and the persistent
+application volume will be deleted no later than **seven days after written confirmation that review is
+complete**. This is a manual operational commitment because the reviewer controls when the assessment ends;
+the application does not silently delete evidence during review. The deletion procedure is documented in
+[Operations](OPERATIONS.md).
+
+## Gemini disclosure
+
+- Two independent requests send the complete normalized audio inline to the Gemini Developer API. Audio
+  therefore leaves the AutoAce-hosted GCP VM and is processed by Google. Filenames and supplied labels are
+  excluded from both requests.
+- The application uses direct inline requests, not the Gemini Files API, cached content, grounding, or tuning.
+- The first response's redacted transcript exists only in application memory and is not sent in the second
+  request. Structured predictions and aggregate diagnostics are persisted locally.
+- The deployment is designed for the paid Gemini service. Google's current terms state that paid-service
+  prompts, files, and responses are not used to improve its products. Google may retain prompts and responses
+  for a limited period for abuse prevention or legal compliance and may transiently cache or process them in
+  countries where it maintains facilities. Google does not publish a fixed duration for this abuse-monitoring
+  window. Zero-data-retention approval is not claimed.
+- The documented price assumption for Gemini 3.1 Flash-Lite is $0.50 per million audio-input tokens and
+  $1.50 per million output tokens, including thinking tokens. A paid-service designation requires the API
+  key's owning Cloud project to have active billing.
+
+Current provider references: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing),
+[Gemini API terms](https://ai.google.dev/gemini-api/terms), and
+[zero data retention](https://ai.google.dev/gemini-api/docs/zdr).
 
 ## Before exposing publicly
 
@@ -31,8 +56,9 @@ Gemini paid-service terms.
 2. Set `APP_ENV=production`, `COOKIE_SECURE=true`, an explicit host allowlist, a random session secret,
    and a PBKDF2 password hash through a secret manager.
 3. Restrict inbound access by identity-aware proxy or reviewer IP where possible.
-4. Confirm the company approves sending recordings to Gemini and choose an appropriate region/account.
-5. Set and test deletion/retention policy; do not retain call audio by default indefinitely.
+4. Confirm the company approves sending recordings to Gemini and that the configured key belongs to an
+   active-billing project. Approval for the supplied assessment recordings was received.
+5. Schedule the documented post-review volume deletion; do not retain call audio indefinitely.
 6. Run dependency and container vulnerability scans in CI.
 
 ## Threats intentionally deferred
