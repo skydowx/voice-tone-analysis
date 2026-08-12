@@ -10,12 +10,16 @@
 - Uploads are streamed with file/batch size limits. ZIP traversal, symlinks, excessive expansion ratios,
   excessive entry counts, unsupported extensions, malformed audio, duplicate names, and invalid label
   JSON are rejected or isolated.
-- Provider responses are strict-schema validated. The prompt explicitly forbids transcripts and PII.
+- Structured provider responses are strict-schema validated and explicitly forbid PII or spoken words.
+- The emotion pass returns a redacted speaker-turn transcript to process memory. It is used only by local
+  deterministic rules and is never stored, logged, displayed, or included in another provider request.
 - The UI never exposes server-side paths or the Gemini API key.
 
 ## Data flow and retention
 
 Normalized WAV is created in a temporary directory and deleted immediately after each inference call.
+Ephemeral transcript text becomes unreachable when that item completes; audit records contain only aggregate
+turn counts and emotion-evidence scores.
 Original uploaded clips remain under the configured data directory to support audit/retry. They are not
 committed to source control. For an evaluation deployment, delete the persistent volume after review or
 apply an agreed short retention window. Provider request logs and retention are governed by the selected

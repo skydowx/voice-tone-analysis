@@ -23,6 +23,7 @@ class InferenceOutcome:
     latency_seconds: float
     usage: Usage
     provider_request_id: str | None = None
+    diagnostics: dict[str, float | bool | str] | None = None
 
 
 class InferenceProvider(Protocol):

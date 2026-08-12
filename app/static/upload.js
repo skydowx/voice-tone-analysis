@@ -5,6 +5,7 @@
   const selected = document.getElementById("selected-files");
   const analyze = document.getElementById("analyze-button");
   const zone = document.getElementById("drop-zone");
+  let activeInput = null;
 
   function showSelection(files) {
     if (!files.length) return;
@@ -14,6 +15,8 @@
   }
 
   inputs.forEach(input => input.addEventListener("change", () => {
+    if (!input.files.length) return;
+    activeInput = input;
     inputs.filter(other => other !== input).forEach(other => { other.value = ""; });
     showSelection(input.files);
   }));
@@ -22,10 +25,12 @@
   zone.addEventListener("drop", event => {
     const input = inputs[0];
     input.files = event.dataTransfer.files;
+    activeInput = input;
     inputs.slice(1).forEach(other => { other.value = ""; });
     showSelection(input.files);
   });
   form.addEventListener("submit", () => {
+    inputs.forEach(input => { input.disabled = input !== activeInput; });
     analyze.disabled = true;
     analyze.textContent = "Uploading and validating…";
   });

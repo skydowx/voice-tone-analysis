@@ -7,8 +7,8 @@ from pathlib import Path
 
 from app.config import Settings
 from app.schemas.prediction import AudioQuality, Prediction, PredictionEnvelope
-from app.services.audio import AcousticFeatures, analyze_pcm, normalize_audio
-from app.services.inference.base import InferenceProvider
+from app.services.audio import AcousticFeatures, analyze_pcm, compact_active_speech, normalize_audio
+from app.services.inference.base import InferenceOutcome, InferenceProvider, Usage
 from app.services.inference.gemini import PROMPT_VERSION
 
 
@@ -18,6 +18,8 @@ MODEL_RATES = {
     "gemini-3.5-flash": (1.50, 9.00),
     "gemini-3-flash-preview": (1.00, 3.00),
     "gemini-2.5-flash": (1.00, 2.50),
+    # Both bounded audio passes use the same pinned model and are summed.
+    "gemini-3.1-flash-lite+gemini-3.1-flash-lite": (0.50, 1.50),
 }
 
 
@@ -33,6 +35,20 @@ def _reconcile(prediction: Prediction, features: AcousticFeatures) -> Prediction
     # A fixed signal definition is more reproducible than an LLM's subjective
     # interpretation of ordinary conversational pauses.
     data["long_silence_present"] = features.long_silence_present
+
+    static_signature = (
+        features.broadband_transient_seconds >= 0.20
+        and features.broadband_transient_bursts >= 3
+    )
+    if static_signature and not prediction.background_noise_present:
+        data["background_noise_present"] = True
+        data["background_noise_type"] = "sharp static"
+        data["background_noise_severity"] = (
+            "medium"
+            if features.broadband_transient_seconds >= 0.30
+            or features.broadband_transient_bursts >= 6
+            else "low"
+        )
 
     severe_signal_problem = (
         features.clipping_ratio >= 0.08
@@ -72,7 +88,31 @@ class AudioClassifier:
             normalized = Path(temp_dir) / "normalized.wav"
             original_probe = normalize_audio(source, normalized)
             features = analyze_pcm(normalized, self.settings.long_silence_seconds)
-            outcome = self.provider.analyze(normalized, features, model=model)
+            inference_audio = normalized
+            compaction_ratio = 1.0
+            if self.settings.gemini_audio_view in {"speech_compact", "dual"}:
+                inference_audio = Path(temp_dir) / "speech-compact.wav"
+                compaction_ratio = compact_active_speech(normalized, inference_audio)
+            if self.settings.gemini_audio_view == "dual" and compaction_ratio < 1.0:
+                full = self.provider.analyze(normalized, features, model=model)
+                focused = self.provider.analyze(inference_audio, features, model=model)
+                focused_data = focused.prediction.model_dump()
+                focused_data["emotional_tone"] = full.prediction.emotional_tone
+                focused_data["confidence"] = min(full.prediction.confidence, focused.prediction.confidence)
+                outcome = InferenceOutcome(
+                    prediction=Prediction.model_validate(focused_data),
+                    model=full.model,
+                    latency_seconds=full.latency_seconds + focused.latency_seconds,
+                    usage=Usage(
+                        input_tokens=full.usage.input_tokens + focused.usage.input_tokens,
+                        output_tokens=full.usage.output_tokens + focused.usage.output_tokens,
+                        thinking_tokens=full.usage.thinking_tokens + focused.usage.thinking_tokens,
+                        total_tokens=full.usage.total_tokens + focused.usage.total_tokens,
+                    ),
+                    diagnostics={**(full.diagnostics or {}), **(focused.diagnostics or {})},
+                )
+            else:
+                outcome = self.provider.analyze(inference_audio, features, model=model)
         prediction = _reconcile(outcome.prediction, features)
         cost = estimate_cost(
             outcome.model,
@@ -92,5 +132,9 @@ class AudioClassifier:
             thinking_tokens=outcome.usage.thinking_tokens,
             estimated_cost_usd=round(cost, 8),
             cost_per_audio_minute_usd=round(cost / duration_minutes, 8),
-            features=features.as_dict(),
+            features={
+                **features.as_dict(),
+                "speech_compaction_ratio": round(compaction_ratio, 5),
+                **(outcome.diagnostics or {}),
+            },
         )

@@ -71,3 +71,19 @@ async def test_authenticated_batch_flow_and_download(client, tmp_path):
     assert csv_response.status_code == 200
     assert csv_response.text.startswith("name,result_json")
     assert "call.wav" in csv_response.text
+
+
+async def test_upload_ignores_empty_unused_file_picker(client, tmp_path):
+    await login(client)
+    dashboard = await client.get("/")
+    response = await client.post(
+        "/batches",
+        data={"csrf_token": csrf_from(dashboard)},
+        files=[
+            ("files", ("evaluation.zip", make_batch_zip(tmp_path), "application/zip")),
+            ("files", ("", b"", "application/octet-stream")),
+        ],
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/batches/")

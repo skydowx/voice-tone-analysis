@@ -6,6 +6,8 @@
 - `GET /readyz` verifies SQLite is accessible.
 - A batch in `completed_with_errors` is a successful partial run; inspect each item error.
 - On restart, in-flight items and batches are marked failed rather than left permanently “processing.”
+- On the GCP VM, inspect first-boot progress with `gcloud compute instances get-serial-port-output autoace-app
+  --zone us-east1-b --project autoace-assessment`.
 
 ## Common failures
 
@@ -13,7 +15,7 @@
 |---|---|---|
 | Validation finding | Missing/mismatched manifest row or invalid media | Fix that file; valid siblings still run |
 | Gemini inference failed | Key, quota, provider timeout, or schema rejection | Check provider status/quota; retry a new batch |
-| Cost/min above ceiling | Model or output-token change | Revert to Flash-Lite/bounded output; rerun benchmark |
+| Cost/min above ceiling | Model, prompt, or output-token change | Revert to the pinned Flash-Lite pipeline; rerun benchmark and check both aggregate and maximum per-clip cost |
 | `ffprobe` missing | Host dependency absent | Install FFmpeg or use the container |
 | Cookie login loop | Secure cookie over plain HTTP | Use HTTPS in production or development mode locally |
 

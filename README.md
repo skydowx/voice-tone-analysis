@@ -2,7 +2,7 @@
 
 A production-shaped evaluation application for batch analysis of customer-service call audio. It
 accepts a ZIP or browser-selected folder containing audio plus `labels.csv`, validates the batch,
-processes valid files independently with Gemini structured output, shows progress and per-file errors,
+processes valid files independently with a hybrid Gemini/local pipeline, shows progress and per-file errors,
 and exports the required `name,result_json` CSV.
 
 ## Quick start
@@ -60,10 +60,15 @@ Every prediction contains exactly:
   secure-cookie production guardrails, and optional PBKDF2 password hashes
 - Model/prompt version, measured duration/latency/token usage/cost, deterministic signal diagnostics, and
   downloadable CSV/JSON audit artifacts
+- Ephemeral redacted speaker-turn transcription for local-only customer-emotion reconciliation; transcript
+  text is never persisted, logged, displayed, or sent in a follow-up provider request
+- Anonymous per-voice behavior profiles for overlap and role confidence, plus local silence, signal-quality,
+  and broadband-static detectors
 - Health/readiness endpoints, non-root container, persistent Compose volume, and deployment script
 
-The generated evaluation report is in [docs/EVALUATION.md](docs/EVALUATION.md), the experiment narrative
-is in [docs/TECHNICAL_MEMO.md](docs/TECHNICAL_MEMO.md), and the final supplied-call output is
+The generated evaluation report is in [docs/EVALUATION.md](docs/EVALUATION.md), the full experiment ledger
+is in [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md), the experiment narrative is in
+[docs/TECHNICAL_MEMO.md](docs/TECHNICAL_MEMO.md), and the final supplied-call output is
 [artifacts/provided_predictions.csv](artifacts/provided_predictions.csv). Architecture, risks, deployment,
 and operational decisions are documented under `docs/`.
 

@@ -1,30 +1,30 @@
 {
   "sample_count": 3,
-  "model": "gemini-3.1-flash-lite",
-  "prompt_version": "2026-08-11.v5",
+  "model": "gemini-3.1-flash-lite+gemini-3.1-flash-lite",
+  "prompt_version": "2026-08-12.v7",
   "field_accuracy": {
     "emotional_tone": 0.3333333333333333,
-    "emotional_intensity": 0.3333333333333333,
-    "background_noise_present": 0.3333333333333333,
-    "background_noise_severity": 0.3333333333333333,
+    "emotional_intensity": 0.6666666666666666,
+    "background_noise_present": 1.0,
+    "background_noise_severity": 1.0,
     "audio_quality": 1.0,
     "speaker_overlap_present": 0.6666666666666666,
     "long_silence_present": 1.0,
-    "background_noise_type_normalized": 0.3333333333333333
+    "background_noise_type_normalized": 1.0
   },
-  "exact_match_rate": 0.0,
-  "emotional_tone_macro_f1": 0.13333333333333333,
-  "emotional_tone_macro_f1_observed_classes": 0.2222222222222222,
+  "exact_match_rate": 0.3333333333333333,
+  "emotional_tone_macro_f1": 0.2,
+  "emotional_tone_macro_f1_observed_classes": 0.3333333333333333,
   "emotional_tone_per_class": {
     "neutral": {
-      "precision": 0.5,
-      "recall": 1.0,
-      "f1": 0.6666666666666666
-    },
-    "satisfied": {
       "precision": 0.0,
       "recall": 0.0,
       "f1": 0.0
+    },
+    "satisfied": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
     },
     "frustrated": {
       "precision": 0.0,
@@ -42,16 +42,17 @@
       "f1": 0.0
     }
   },
-  "confidence_mae": 0.030000000000000027,
+  "confidence_mae": 0.036666666666666625,
+  "assessment_quality_score": 0.6089000000000001,
   "tone_confusion": [
     {
       "expected": "neutral",
-      "predicted": "neutral",
+      "predicted": "frustrated",
       "count": 1
     },
     {
       "expected": "satisfied",
-      "predicted": "frustrated",
+      "predicted": "satisfied",
       "count": 1
     },
     {
@@ -61,17 +62,19 @@
     }
   ],
   "latency_seconds": {
-    "total": 17.371000000000002,
-    "mean": 5.790333333333333,
-    "p50": 4.088,
-    "p95": 10.353,
-    "real_time_factor": 0.07303618804159082
+    "total": 24.122999999999998,
+    "mean": 8.040999999999999,
+    "p50": 5.586,
+    "p95": 14.027,
+    "real_time_factor": 0.10142490150983219
   },
   "cost": {
-    "total_usd": 0.0035080000000000003,
+    "total_usd": 0.008264,
     "audio_minutes": 3.9640166666666667,
-    "usd_per_audio_minute": 0.0008849609613144916,
+    "usd_per_audio_minute": 0.0020847541004284376,
+    "max_item_usd_per_audio_minute": 0.00261939,
     "ceiling_usd_per_audio_minute": 0.003,
+    "all_items_within_ceiling": true,
     "within_ceiling": true
   }
 }

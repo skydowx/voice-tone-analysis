@@ -2,79 +2,89 @@
 
 ## Executive summary
 
-The final system is a hybrid: Gemini 3.1 Flash-Lite classifies customer emotion and semantic sound
-events, while deterministic PCM analysis owns long-silence decisions and guards technical-quality
-confounds. The selected implementation processed the 3.964-minute supplied set in 17.37 seconds and cost
-an estimated $0.003508 total, or **$0.000885 per audio minute**. Every clip remained below the $0.003/minute
-ceiling individually. The web application adds strict validation, partial-failure handling, auditable
-results, authentication, and a reproducible container/deployment path.
+The selected system is a two-pass Gemini 3.1 Flash-Lite and deterministic-signal ensemble. One pass creates
+an ephemeral, redacted speaker-turn transcript used only by local customer-emotion rules. A second pass
+produces anonymous voice profiles plus noise, quality, overlap, and silence fields under a strict schema.
+Local PCM analysis owns long silence, severe technical impairment, and a conservative broadband-static
+signature.
 
-The visible set is only three calls, so it is not reported as held-out accuracy. Its most important result
-is cautionary: five-class emotional-tone macro F1 is 0.133 (0.222 across classes observed in the three
-labels), with only the neutral example correct.
-That makes emotional calibration the primary residual risk. The submission does not disguise this by
-copying supplied labels or adding filename-specific rules.
+On the supplied 3.964-minute smoke set, the final pipeline scored **0.609** on the internal assessment-weighted
+promotion metric, up from **0.428** for the direct baseline. Exact categorical match increased from 0% to
+33.3%. Background-noise presence/type/severity, audio quality, and silence were all 100%; intensity and
+overlap were 66.7%. Tone accuracy remained 33.3%, with observed-class macro F1 of 0.333, and is the primary
+residual risk.
+
+The final run took 24.12 seconds (0.10x real time). Estimated cost was **$0.002085/audio minute** overall,
+and the most expensive individual clip was **$0.002619/audio minute**, both below the $0.003 ceiling.
+
+## Selected architecture
+
+1. FFmpeg normalizes each clip to 16 kHz mono PCM; deterministic acoustic diagnostics are computed locally.
+2. Gemini produces a concise role-labelled transcript with identifying values redacted. Only CUSTOMER turns
+   are inspected by generic local lexical rules. The transcript is never stored, logged, displayed, or sent
+   in another provider request.
+3. A separate Gemini call profiles distinct voices using observable service-seeker/provider/background
+   behavior and returns the non-emotion fields. Deterministic code selects the service seeker and calibrates
+   confidence from role separation.
+4. Local rules set long silence, protect technical quality from noise confounds, and detect repeated loud
+   high-zero-crossing broadband bursts as sharp static.
+5. The exact public Pydantic schema is validated before persistence or export; usage, latency, diagnostics,
+   model, prompt version, and estimated cost are retained in the audit envelope.
 
 ## Approaches tested
 
-| Candidate | Result on supplied set | Cost / audio min | Decision |
-|---|---|---:|---|
-| Deterministic PCM baseline | Reliable silence/signal checks; cannot infer semantic emotion/noise source | Local compute only | Retained as guardrail |
-| Gemini 3.5 Flash-Lite | Collapsed mostly to neutral/low and missed meaningful noise/overlap | $0.000744 | Rejected on quality |
-| Gemini 3 Flash Preview + object JSON | Better noise, overlap, and intensity; verbose output overhead | $0.001923 | Improved |
-| Gemini 3.5 Flash + compact tuple | No visible quality gain; two short calls exceeded the ceiling | $0.002797 aggregate | Rejected on per-call cost |
-| Gemini 3 Flash Preview + compact tuple + deterministic guards | Stronger noise/intensity fields but zero visible tone macro F1 | $0.001755 | Retained benchmark |
-| Gemini 3.1 Flash-Lite + compact tuple + deterministic guards | Only candidate with non-zero visible tone macro F1; GA and fastest | **$0.000885** | Selected |
+| Candidate | Weighted score | Cost/audio min | Decision |
+|---|---:|---:|---|
+| Direct Flash-Lite compact classification | 0.428 | $0.000885 | Baseline |
+| Continuous latent emotion dimensions | 0.424 | $0.000947 | Rejected; no quality gain |
+| Energy-VAD speech compaction | 0.406 | $0.000799 | Rejected; tone regressed |
+| Full/compacted dual view | 0.406 | $0.001704 | Rejected; more cost, no gain |
+| Ranked customer emotion episodes | 0.349 | $0.000978 | Rejected; role/tone errors |
+| Ephemeral transcript + local reconciliation | 0.526 | $0.001989 | Retained emotion component |
+| Prosody-tagged transcript | 0.492 | $0.002063 | Rejected in two repeat runs |
+| Anonymous speaker profiles, Flash-Lite | 0.379 | $0.001016 | Retained overlap component only |
+| Anonymous speaker profiles, Flash Preview | 0.369 | $0.002092 | Rejected; one clip exceeded ceiling |
+| Transcript-local + profile ensemble | 0.545 | $0.002085 | Retained |
+| Final ensemble + local static detector | **0.609** | **$0.002085** | Selected |
 
-The provider wire format is a fixed typed nine-value JSON tuple. It maps immediately into the exact named
-Pydantic object and is validated there. This saves roughly 75–80 output tokens per clip without changing
-the public CSV/JSON schema.
+A local quantized Wav2Vec2 speech-emotion candidate was also benchmarked without uploading audio. It heavily
+predicted “happy” for both the visible upset and neutral calls, consistent with acted-speech/domain mismatch,
+so it was not added to production dependencies. The complete reproducible metric ledger is in
+`docs/EXPERIMENTS.md`.
 
-## Validation method and leakage prevention
+## Validation and leakage prevention
 
-The reproducible scorer reports per-field accuracy, five-class emotional macro F1, per-class precision/
-recall/F1, a tone confusion matrix, normalized noise-type agreement, confidence MAE, cost, and latency.
-No cross-validation estimate is credible with one example for each visible tone and likely shared production
-conditions. The three labels were used only for bounded prompt/model calibration. Filenames and expected
-JSON are never sent to the model, and no filename-specific post-processing exists.
+The scorer reports exact match, per-field accuracy, five-class and observed-class emotional macro F1,
+per-class precision/recall/F1, confusion, normalized noise-type agreement, confidence MAE, latency, and both
+aggregate and maximum per-clip cost. The internal promotion score gives half its weight to tone and distributes
+the remainder across the required fields and confidence.
 
-Automated tests cover schema invariants, archive traversal, duplicate/missing/unmatched files, FFmpeg media
-normalization, deterministic silence, technical-quality reconciliation, pricing, hashed authentication,
-CSRF/login flow, background processing, status polling, and result download. Current non-provider application
-coverage is 86%.
+Three examples cannot provide a credible generalization estimate. They were used for bounded component and
+architecture selection, not filename-specific calibration. Filenames and supplied JSON are never sent to a
+model; no filename or clip-duration lookup appears in prediction code. The broadband detector uses a general
+signal signature and has a synthetic regression test rather than a sample-name rule.
 
-## Cost model
+## Cost and latency model
 
-Cost is calculated from Gemini's returned prompt, candidate, and thinking-token counts using paid standard
-rates: $0.50/M audio-input tokens (conservatively applied to every input token) and $1.50/M output/thinking
-tokens for Gemini 3.1 Flash-Lite. The measured final run used no thinking tokens. Applying the audio rate
-to text prompt tokens deliberately overestimates cost.
+Cost uses provider-returned input, output, and thinking-token counts with the pinned Flash-Lite rates. Every
+input token is conservatively charged at the audio-input rate. Both provider calls are included. Unknown model
+names use deliberately conservative fallback prices so configuration drift cannot silently under-report cost.
+The evaluator fails if either the aggregate or any individual clip exceeds $0.003/audio minute.
 
-The system records cost per item and batch. Unknown configured models use conservative fallback rates so a
-model-name change cannot silently under-report spend. Compact output is essential for short clips, where a
-fixed JSON object otherwise dominates cost per minute.
-
-## Latency and production practicality
-
-Final sequential latency was 17.37 seconds total, 5.79 seconds mean per clip, p50 4.09 seconds, p95 10.35
-seconds, and 0.073× real time. The dashboard uses two bounded workers by default, so normal batch wall time
-is lower while API concurrency remains controlled. One malformed/provider-failed item is recorded and does
-not stop siblings.
+The measured 24.12-second sequential runtime corresponds to 0.10x real time. The application uses two bounded
+workers by default, which reduces normal batch wall time while limiting API concurrency. Individual media or
+provider failures are persisted per item and do not abort valid siblings.
 
 ## Failure modes and next steps
 
-1. **Emotional calibration:** acquire at least 50–100 independently annotated calls per class, measure
-   inter-annotator agreement, and tune class thresholds on grouped call/speaker splits. This is the highest
-   priority because the three-call smoke set shows systematic adjacent-class and source-attribution errors.
-2. **Speaker attribution:** add a diarization/VAD stage or consume separated call channels when available;
-   do not infer customer identity from mixed audio alone.
-3. **Noise and overlap:** benchmark an AudioSet event detector and a dedicated overlap detector, then ensemble
-   only when grouped validation shows a gain within latency/cost limits.
-4. **Confidence:** replace the conservative cap with temperature/isotonic calibration once an adequate
-   validation set exists.
-5. **Scale:** migrate SQLite/filesystem state to Postgres/object storage and the in-process worker to a managed
-   queue before enabling multiple application replicas.
-6. **Model selection:** re-evaluate the 3.1 Lite/3 Flash tradeoff on the first credible grouped validation
-   set; the latter was materially better on noise-related fields despite its weaker three-call tone score.
+1. **Tone and role attribution:** collect at least 50–100 independently annotated calls per class, report
+   inter-annotator agreement, and evaluate by grouped speaker/call-source splits. Tone is still visibly weak.
+2. **Diarization:** consume separated telephony channels when available, or validate a local diarizer on the
+   real domain. The supplied stereo files contain duplicate channels, so splitting them adds no information.
+3. **Static detector:** validate thresholds on diverse speech, applause, keyboard, and impulsive-noise examples
+   before treating its three-call result as a production estimate.
+4. **Confidence:** fit temperature or isotonic calibration only after a representative validation set exists.
+5. **Scale:** replace SQLite/filesystem state and the in-process worker with Postgres, object storage, and a
+   managed queue before running multiple replicas.
 
-See `docs/EVALUATION.md` for the generated metrics and `docs/ARCHITECTURE.md` for system boundaries.
+See `docs/EVALUATION.md` for the generated report and `docs/ARCHITECTURE.md` for system boundaries.

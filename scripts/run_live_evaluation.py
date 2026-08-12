@@ -20,11 +20,29 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/live"))
     parser.add_argument("--model", default=None)
     parser.add_argument("--thinking-level", choices=("minimal", "low"), default=None)
+    parser.add_argument(
+        "--emotion-strategy",
+        choices=(
+            "direct",
+            "latent",
+            "episodes",
+            "speaker_profiles",
+            "transcript_local",
+            "transcript_local_tagged",
+            "transcript_local_profiles",
+        ),
+        default=None,
+    )
+    parser.add_argument("--audio-view", choices=("full", "speech_compact", "dual"), default=None)
     args = parser.parse_args()
 
     settings = Settings()
     if args.thinking_level:
         settings.gemini_thinking_level = args.thinking_level
+    if args.emotion_strategy:
+        settings.gemini_emotion_strategy = args.emotion_strategy
+    if args.audio_view:
+        settings.gemini_audio_view = args.audio_view
     if settings.gemini_api_key is None:
         parser.error("GEMINI_API_KEY is not configured")
     settings.ensure_directories()

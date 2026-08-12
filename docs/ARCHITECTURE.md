@@ -15,25 +15,28 @@ SQLite batch/items ◄──────────── bounded background wo
                                       │
                          deterministic signal diagnostics
                                       │
-                         Gemini strict structured output
+                    ┌──── Gemini ephemeral redacted turns ──► local emotion rules
+                    │                 (never persisted)
+                    └──── Gemini anonymous voice profiles ──► role/overlap fields
                                       │
-                        invariant reconciliation + costing
+                   signal/static guards + invariant reconciliation + costing
                                       ▼
                          SQLite results → UI / CSV / JSON
 ```
 
 ## Key choices
 
-`gemini-3.1-flash-lite` is the default because it was the only tested candidate with non-zero visible-set
-emotional macro F1, the assessment's dominant metric. It is a stable GA model, ran faster, and stayed far
-below the $0.003/audio-minute requirement. `gemini-3-flash-preview` remains configurable as the stronger
-noise/intensity benchmark and is the first candidate to revisit with a larger grouped validation set.
-The provider is behind an `InferenceProvider` protocol, so an alternative model does not affect intake,
-jobs, persistence, or UI.
+The default makes two bounded `gemini-3.1-flash-lite` audio calls. The first produces a redacted role-labelled
+transcript that is reconciled locally and immediately discarded. The second returns anonymous per-voice
+behavior profiles and the non-emotion fields under a strict compact schema. This recovered the visible
+satisfied example and improved overlap without ever sending derived transcript text back to the provider.
+The provider remains behind an `InferenceProvider` protocol, so alternatives do not affect intake, jobs,
+persistence, or UI.
 
 Audio is converted to 16 kHz mono PCM. This gives Gemini one consistent representation and enables
-local signal checks. The checks own only technically deterministic facts (long low-energy runs and
-severe signal impairment); the model owns semantic tone, noise source, and conversational overlap.
+local signal checks. The checks own technically deterministic facts: long low-energy runs, severe signal
+impairment, and repeated loud broadband transients characteristic of sharp static. Semantic tone and ordinary
+noise/overlap remain model-assisted.
 
 SQLite plus filesystem objects are deliberate for a single-instance assessment deployment: simple,
 inspectable, transactional, and persistent on a VM/Compose volume. The repository and file boundary is
@@ -48,6 +51,7 @@ managed queue and idempotent worker service.
 - “Long silence” means at least 10 consecutive seconds below -45 dBFS. The model may also flag semantic
   dead air; local evidence can only change `false` to `true`.
 - Customer emotion is requested even when both sides are audible. Low certainty should lower confidence.
+- An ephemeral transcript is approved for these assessment recordings and stays inside process memory.
 - Noise type is short open text and is empty exactly when noise is absent.
 - A browser folder selection can flatten paths; nested folder manifests are rejected to keep name matching
   deterministic.

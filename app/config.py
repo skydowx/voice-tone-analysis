@@ -23,11 +23,20 @@ class Settings(BaseSettings):
 
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.1-flash-lite"
-    gemini_benchmark_model: str = "gemini-3-flash-preview"
     gemini_timeout_seconds: int = Field(default=300, ge=15, le=900)
     gemini_max_output_tokens: int = Field(default=384, ge=128, le=1024)
     gemini_max_retries: int = Field(default=2, ge=0, le=5)
     gemini_thinking_level: Literal["minimal", "low"] = "minimal"
+    gemini_emotion_strategy: Literal[
+        "direct",
+        "latent",
+        "episodes",
+        "speaker_profiles",
+        "transcript_local",
+        "transcript_local_tagged",
+        "transcript_local_profiles",
+    ] = "transcript_local_profiles"
+    gemini_audio_view: Literal["full", "speech_compact", "dual"] = "full"
 
     max_batch_files: int = Field(default=100, ge=1, le=1000)
     max_file_bytes: int = Field(default=50 * 1024 * 1024, ge=1024)

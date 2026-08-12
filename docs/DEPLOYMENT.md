@@ -14,6 +14,42 @@ curl --fail http://127.0.0.1:8080/healthz
 This is the recommended evaluation topology because SQLite and uploaded audio persist on the named volume.
 Keep one application replica.
 
+### Google Cloud VM provisioning
+
+The checked-in provisioning script creates the recommended topology in `us-east1`: an `e2-small`
+Compute Engine VM, 20 GB standard persistent boot disk, reserved external IP, HTTPS through Caddy,
+Artifact Registry image, and a dedicated least-privilege VM service account. The application data and
+Caddy certificates live in named Docker volumes on the persistent boot disk.
+
+Authenticate `gcloud`, activate a configuration targeting the intended project, and run:
+
+```bash
+GCP_PROJECT_ID=autoace-assessment \
+AUTOACE_DOMAIN=autoace.omerkhalil.com \
+deploy/gcp/provision.sh
+```
+
+The script creates a temporary `<static-ip>.sslip.io` HTTPS hostname, so the deployment can be checked before
+DNS is changed. It stores the local Gemini key and generated application secrets in Secret Manager; their
+values are never placed in VM metadata or container images. Add an `A` record for the final hostname after
+the temporary health check succeeds.
+
+The evaluator password is generated during first provisioning. Retrieve it locally with:
+
+```bash
+gcloud secrets versions access latest \
+  --secret autoace-evaluator-password \
+  --project autoace-assessment
+```
+
+The initial deployment uses `us-east1-b` because all `us-central1` zones returned temporary E2 capacity
+errors during provisioning. Artifact Registry remains in `us-central1`; this does not affect the public URL
+or application behavior. Deploy a new immutable image and restart the existing VM with:
+
+```bash
+deploy/gcp/redeploy.sh
+```
+
 ## Cloud Run smoke deployment
 
 `deploy/cloudrun.sh` builds and deploys a single instance with background CPU enabled. Before running it,

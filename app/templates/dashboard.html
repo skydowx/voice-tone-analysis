@@ -17,7 +17,7 @@
       <label class="button primary">Choose ZIP<input type="file" name="files" accept=".zip" hidden></label>
       <label class="button secondary">Choose folder<input type="file" name="files" webkitdirectory directory multiple hidden></label>
     </div>
-    <small>Supported audio: OGG/Opus, WAV, MP3, AAC, FLAC, M4A, MP4 and WebM · {{ settings.max_batch_files }} files maximum</small>
+    <small>Include <strong>labels.csv</strong> and all audio files at the ZIP or folder root · Supported audio: OGG/Opus, WAV, MP3, AAC, FLAC, M4A, MP4 and WebM · {{ settings.max_batch_files }} files maximum</small>
   </div>
   <div class="selected-files" id="selected-files" hidden></div>
   <button class="button primary" id="analyze-button" type="submit" disabled>Validate and analyze</button>

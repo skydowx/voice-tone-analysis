@@ -11,6 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse, Response
+from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.status import HTTP_303_SEE_OTHER
 
 from app.dependencies import processor_from, repository_from, settings_from
@@ -61,13 +62,20 @@ async def dashboard(request: Request):
 @router.post("/batches")
 async def create_batch(
     request: Request,
-    files: Annotated[list[UploadFile], File()],
+    files: Annotated[list[UploadFile | str], File()],
     csrf_token: Annotated[str, Form()],
 ):
     require_login(request)
     verify_csrf(request, csrf_token)
     settings = settings_from(request)
-    if not files:
+    # Browsers submit an empty multipart part for the unused ZIP/folder picker.
+    # Ignore those placeholders while still rejecting a genuinely empty form.
+    selected_files = [
+        upload
+        for upload in files
+        if isinstance(upload, StarletteUploadFile) and (upload.filename or "").strip()
+    ]
+    if not selected_files:
         raise HTTPException(400, "Choose a ZIP archive or batch folder")
 
     staging = settings.uploads_dir / f"staging-{uuid.uuid4().hex}"
@@ -77,7 +85,7 @@ async def create_batch(
     total_bytes = 0
     seen: set[str] = set()
     try:
-        for upload in files:
+        for upload in selected_files:
             name = sanitize_filename(upload.filename or "")
             if name in seen:
                 raise BatchValidationError(f"Duplicate uploaded filename: {name}")
@@ -123,7 +131,8 @@ async def create_batch(
         )
     finally:
         for upload in files:
-            await upload.close()
+            if isinstance(upload, StarletteUploadFile):
+                await upload.close()
 
 
 @router.get("/batches/{batch_id}")

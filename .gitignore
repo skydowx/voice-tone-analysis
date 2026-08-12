@@ -11,5 +11,6 @@ var/
 artifacts/live*/
 artifacts/evaluation-*.json
 *.ogg
+*.zip
 voice_tone_background_noise_dashboard_trial.pdf
 .agent-native/plans/*/.plan-url

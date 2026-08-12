@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import datetime, timezone
 import json
 import math
 import statistics
@@ -86,6 +87,9 @@ def main() -> int:
     parser.add_argument("--audit", type=Path, default=Path("artifacts/live/audit.json"))
     parser.add_argument("--json-output", type=Path, default=Path("artifacts/evaluation.json"))
     parser.add_argument("--markdown-output", type=Path, default=Path("docs/EVALUATION.md"))
+    parser.add_argument("--experiment-id", default=None)
+    parser.add_argument("--experiment-description", default="")
+    parser.add_argument("--experiment-log", type=Path, default=Path("artifacts/experiments.json"))
     args = parser.parse_args()
 
     expected = load_csv(args.labels)
@@ -134,11 +138,30 @@ def main() -> int:
     total_minutes = sum(float(item["duration_seconds"]) for item in audit_items) / 60
     total_latency = sum(latencies)
     cost_per_minute = total_cost / total_minutes if total_minutes else 0.0
+    item_costs_per_minute = [
+        float(item.get("cost_per_audio_minute_usd", 0.0)) for item in audit_items
+    ]
+    max_item_cost_per_minute = max(item_costs_per_minute, default=0.0)
+    cost_ceiling = 0.003
+    all_items_within_ceiling = all(value <= cost_ceiling for value in item_costs_per_minute)
     real_time_factor = total_latency / (total_minutes * 60) if total_minutes else 0.0
+    confidence_score = max(0.0, 1.0 - confidence_mae)
+    tone_score = (accuracy["emotional_tone"] + observed_macro_f1) / 2
+    assessment_quality_score = (
+        0.50 * tone_score
+        + 0.10 * accuracy["emotional_intensity"]
+        + 0.07 * accuracy["background_noise_present"]
+        + 0.06 * accuracy["background_noise_severity"]
+        + 0.05 * noise_type_accuracy
+        + 0.08 * accuracy["audio_quality"]
+        + 0.07 * accuracy["speaker_overlap_present"]
+        + 0.04 * accuracy["long_silence_present"]
+        + 0.03 * confidence_score
+    )
 
     report = {
         "sample_count": len(names),
-        "model": audit_payload.get("model"),
+        "model": audit_items[0].get("model") if audit_items else audit_payload.get("model"),
         "prompt_version": audit_payload.get("prompt_version"),
         "field_accuracy": {**accuracy, "background_noise_type_normalized": noise_type_accuracy},
         "exact_match_rate": exact_match,
@@ -146,6 +169,7 @@ def main() -> int:
         "emotional_tone_macro_f1_observed_classes": observed_macro_f1,
         "emotional_tone_per_class": tone_metrics,
         "confidence_mae": confidence_mae,
+        "assessment_quality_score": assessment_quality_score,
         "tone_confusion": [
             {"expected": expected_tone, "predicted": predicted_tone, "count": count}
             for (expected_tone, predicted_tone), count in sorted(confusion.items())
@@ -161,13 +185,37 @@ def main() -> int:
             "total_usd": total_cost,
             "audio_minutes": total_minutes,
             "usd_per_audio_minute": cost_per_minute,
-            "ceiling_usd_per_audio_minute": 0.003,
-            "within_ceiling": cost_per_minute <= 0.003,
+            "max_item_usd_per_audio_minute": max_item_cost_per_minute,
+            "ceiling_usd_per_audio_minute": cost_ceiling,
+            "all_items_within_ceiling": all_items_within_ceiling,
+            "within_ceiling": cost_per_minute <= cost_ceiling and all_items_within_ceiling,
         },
     }
     args.json_output.parent.mkdir(parents=True, exist_ok=True)
     args.markdown_output.parent.mkdir(parents=True, exist_ok=True)
     args.json_output.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    if args.experiment_id:
+        experiments = []
+        if args.experiment_log.exists():
+            experiments = json.loads(args.experiment_log.read_text(encoding="utf-8"))
+        record = {
+            "id": args.experiment_id,
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+            "description": args.experiment_description,
+            "model": report["model"],
+            "prompt_version": report["prompt_version"],
+            "assessment_quality_score": assessment_quality_score,
+            "tone_accuracy": accuracy["emotional_tone"],
+            "tone_macro_f1_observed": observed_macro_f1,
+            "field_accuracy": report["field_accuracy"],
+            "cost_per_audio_minute_usd": cost_per_minute,
+            "real_time_factor": real_time_factor,
+            "within_cost_ceiling": report["cost"]["within_ceiling"],
+        }
+        experiments = [item for item in experiments if item.get("id") != args.experiment_id]
+        experiments.append(record)
+        args.experiment_log.parent.mkdir(parents=True, exist_ok=True)
+        args.experiment_log.write_text(json.dumps(experiments, indent=2), encoding="utf-8")
 
     field_rows = "\n".join(
         f"| `{field}` | {value:.1%} |" for field, value in report["field_accuracy"].items()
@@ -186,11 +234,13 @@ reliable production estimate.
 - Model: `{report['model']}`
 - Prompt: `{report['prompt_version']}`
 - Exact categorical match: **{exact_match:.1%}**
+- Assessment-weighted quality score: **{assessment_quality_score:.3f}**
 - Emotional-tone macro F1 (classes observed in n=3): **{observed_macro_f1:.3f}**
 - Emotional-tone macro F1 (all five allowed classes): **{macro_f1:.3f}**
 - Confidence mean absolute error: **{confidence_mae:.3f}**
 - Total measured latency: **{total_latency:.2f}s** ({real_time_factor:.2f}× real time)
 - Estimated cost: **${cost_per_minute:.6f}/audio minute** against the **$0.003** ceiling
+- Maximum per-clip cost: **${max_item_cost_per_minute:.6f}/audio minute**
 
 ## Field accuracy
 
