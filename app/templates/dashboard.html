@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div><p class="eyebrow">Batch workspace</p><h1>Analyze a call batch</h1><p class="lede">Upload a ZIP or select the complete folder. Each valid clip is processed independently.</p></div>
+  <span class="status-pill neutral">{{ request.session.get('user') }}</span>
+</section>
+
+{% if upload_error %}<div class="alert danger">{{ upload_error }}</div>{% endif %}
+
+<form class="card upload-card" method="post" action="/batches" enctype="multipart/form-data" id="upload-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="drop-zone" id="drop-zone">
+    <div class="upload-icon">↑</div>
+    <h2>Drop an evaluation ZIP here</h2>
+    <p>Or choose either a ZIP archive or every file in the evaluation folder.</p>
+    <div class="upload-actions">
+      <label class="button primary">Choose ZIP<input type="file" name="files" accept=".zip" hidden></label>
+      <label class="button secondary">Choose folder<input type="file" name="files" webkitdirectory directory multiple hidden></label>
+    </div>
+    <small>Supported audio: OGG/Opus, WAV, MP3, AAC, FLAC, M4A, MP4 and WebM · {{ settings.max_batch_files }} files maximum</small>
+  </div>
+  <div class="selected-files" id="selected-files" hidden></div>
+  <button class="button primary" id="analyze-button" type="submit" disabled>Validate and analyze</button>
+</form>
+
+<section class="section-heading"><div><p class="eyebrow">History</p><h2>Recent batches</h2></div></section>
+{% if batches %}
+<div class="batch-grid">
+  {% for batch in batches %}
+  <a class="card batch-card" href="/batches/{{ batch.id }}">
+    <div class="batch-card-top"><strong>{{ batch.name }}</strong><span class="status-pill {{ batch.status }}">{{ batch.status|replace('_', ' ') }}</span></div>
+    <div class="batch-stats"><span><b>{{ batch.completed }}</b> complete</span><span><b>{{ batch.failed }}</b> failed</span><span><b>{{ batch.total }}</b> total</span></div>
+    <small>{{ batch.created_at[:19]|replace('T', ' ') }} UTC</small>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><h3>No batches yet</h3><p>Your first validated upload will appear here.</p></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='/upload.js') }}"></script>{% endblock %}

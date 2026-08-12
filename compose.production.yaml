@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    env_file: .env.production
+    environment:
+      APP_ENV: production
+      APP_DATA_DIR: /data
+      COOKIE_SECURE: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - autoace-data:/data
+    restart: unless-stopped
+
+volumes:
+  autoace-data:

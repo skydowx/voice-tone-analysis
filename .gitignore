@@ -1,0 +1,15 @@
+.env
+.agent-native/
+.venv/
+.deps/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+var/
+artifacts/live*/
+artifacts/evaluation-*.json
+*.ogg
+voice_tone_background_noise_dashboard_trial.pdf
+.agent-native/plans/*/.plan-url

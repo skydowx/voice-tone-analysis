@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoace-audio-assessment"
+version = "0.1.0"
+description = "Production-shaped voice tone and background-noise batch analyzer"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "anyio>=4.8,<4.11",
+  "fastapi>=0.115,<1",
+  "google-genai==2.13.0",
+  "itsdangerous>=2.2,<3",
+  "jinja2>=3.1,<4",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "python-multipart>=0.0.20,<1",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+  "pytest-cov>=6,<8",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers"
+testpaths = ["tests"]
+markers = [
+  "live: calls an external paid API and requires GEMINI_API_KEY",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/services/inference/gemini.py"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]

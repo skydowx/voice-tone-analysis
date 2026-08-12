@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    environment:
+      APP_ENV: development
+      APP_DATA_DIR: /data
+      TRUSTED_HOSTS: localhost,127.0.0.1
+    ports:
+      - "8080:8080"
+    volumes:
+      - autoace-data:/data
+    restart: unless-stopped
+
+volumes:
+  autoace-data:

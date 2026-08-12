@@ -1,0 +1,10 @@
+.env
+.git
+.venv
+.pytest_cache
+.coverage
+__pycache__
+artifacts/live
+var
+*.ogg
+*.pdf

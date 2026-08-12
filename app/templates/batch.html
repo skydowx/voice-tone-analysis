@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ batch.name }} · AutoAce{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div><a class="back-link" href="/">← All batches</a><p class="eyebrow">Batch results</p><h1>{{ batch.name }}</h1></div>
+  <div class="download-actions">
+    <a class="button secondary" href="/batches/{{ batch.id }}/results.json">Download JSON</a>
+    <a class="button primary" href="/batches/{{ batch.id }}/results.csv">Download CSV</a>
+  </div>
+</section>
+
+<section class="summary-grid" data-batch-id="{{ batch.id }}" data-status="{{ batch.status }}">
+  <div class="card metric"><span>Status</span><strong class="status-pill {{ batch.status }}">{{ batch.status|replace('_', ' ') }}</strong></div>
+  <div class="card metric"><span>Progress</span><strong>{{ batch.completed + batch.failed }} / {{ batch.total }}</strong></div>
+  <div class="card metric"><span>Audio</span><strong>{{ '%.1f'|format(batch.total_audio_seconds / 60) }} min</strong></div>
+  <div class="card metric"><span>Measured cost</span><strong>${{ '%.6f'|format(batch.cost_per_minute) }}/min</strong></div>
+</section>
+
+{% if batch.status in ['queued', 'processing'] %}
+<div class="card progress-card">
+  {% set progress = ((batch.completed + batch.failed) / batch.total * 100) if batch.total else 0 %}
+  <div class="progress-copy"><strong>Processing audio</strong><span>{{ progress|round|int }}%</span></div>
+  <div class="progress-track"><div style="width: {{ progress }}%"></div></div>
+  <small>This page updates automatically. A failed item will not stop its siblings.</small>
+</div>
+{% endif %}
+
+{% if batch.validation %}
+<section class="card validation-card">
+  <div class="section-heading compact"><div><p class="eyebrow">Intake report</p><h2>Validation findings</h2></div><span class="status-pill neutral">{{ batch.validation|length }}</span></div>
+  {% for issue in batch.validation %}
+  <div class="validation-row"><strong>{{ issue.name }}</strong><span>{{ issue.message }}</span><code>{{ issue.code }}</code></div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="section-heading"><div><p class="eyebrow">Structured output</p><h2>Files</h2></div></section>
+<div class="card table-shell">
+  <table>
+    <thead><tr><th>Filename</th><th>Status</th><th>Tone</th><th>Noise</th><th>Quality</th><th>Overlap</th><th>Confidence</th><th>Cost/min</th></tr></thead>
+    <tbody>
+    {% for item in items %}
+      <tr>
+        <td><strong>{{ item.name }}</strong>{% if item.error %}<small class="row-error">{{ item.error }}</small>{% endif %}</td>
+        <td><span class="status-pill {{ item.status }}">{{ item.status }}</span></td>
+        {% if item.prediction %}
+        <td><span class="tone {{ item.prediction.emotional_tone }}">{{ item.prediction.emotional_tone }}</span><small>{{ item.prediction.emotional_intensity }}</small></td>
+        <td>{% if item.prediction.background_noise_present %}{{ item.prediction.background_noise_type }}<small>{{ item.prediction.background_noise_severity }}</small>{% else %}None{% endif %}</td>
+        <td>{{ item.prediction.audio_quality|replace('_', ' ') }}</td>
+        <td>{{ 'Yes' if item.prediction.speaker_overlap_present else 'No' }}</td>
+        <td><strong>{{ '%.2f'|format(item.prediction.confidence) }}</strong></td>
+        <td>${{ '%.6f'|format(item.cost_per_minute_usd or 0) }}</td>
+        {% else %}
+        <td colspan="6" class="muted">Waiting for a valid result</td>
+        {% endif %}
+      </tr>
+      {% if item.prediction %}
+      <tr class="detail-row"><td colspan="8"><details><summary>View complete JSON and diagnostics</summary><div class="detail-grid"><pre>{{ item.prediction|tojson(indent=2) }}</pre><div><h3>Audit</h3><dl><dt>Model</dt><dd>{{ item.model }}</dd><dt>Latency</dt><dd>{{ item.latency_seconds }} s</dd><dt>Tokens</dt><dd>{{ item.input_tokens }} in · {{ item.output_tokens }} out · {{ item.thinking_tokens }} thinking</dd><dt>Audio duration</dt><dd>{{ item.duration_seconds }} s</dd></dl></div></div></details></td></tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if batch.status in ['queued', 'processing'] %}<script src="{{ url_for('static', path='/progress.js') }}"></script>{% endif %}
+{% endblock %}

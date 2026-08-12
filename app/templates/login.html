@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Sign in · AutoAce{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="auth-copy">
+    <p class="eyebrow">Technical evaluation</p>
+    <h1>Voice tone and call-quality analysis</h1>
+    <p>Upload an evaluation batch, monitor every clip, review structured predictions, and export results without using a command line.</p>
+    <ul class="feature-list">
+      <li>Schema-enforced predictions</li>
+      <li>Per-file error isolation</li>
+      <li>Measured cost and latency</li>
+    </ul>
+  </div>
+  <form class="card auth-card" method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div><p class="eyebrow">Evaluator access</p><h2>Sign in</h2></div>
+    {% if error %}<div class="alert danger">{{ error }}</div>{% endif %}
+    <label>Username<input name="username" autocomplete="username" required autofocus></label>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="button primary full" type="submit">Continue</button>
+  </form>
+</section>
+{% endblock %}

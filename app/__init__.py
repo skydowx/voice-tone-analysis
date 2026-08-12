@@ -1,0 +1,1 @@
+"""AutoAce assessment application."""

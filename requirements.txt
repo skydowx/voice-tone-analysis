@@ -1,0 +1,9 @@
+anyio>=4.8,<4.11
+fastapi>=0.115,<1
+google-genai==2.13.0
+itsdangerous>=2.2,<3
+jinja2>=3.1,<4
+pydantic>=2.10,<3
+pydantic-settings>=2.7,<3
+python-multipart>=0.0.20,<1
+uvicorn[standard]>=0.34,<1
