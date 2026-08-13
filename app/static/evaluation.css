@@ -1,0 +1,107 @@
+.evaluation-panel {
+  margin: 28px 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f9fcfa, #edf7f2);
+}
+
+.evaluation-note {
+  color: var(--muted);
+  margin: 6px 0 16px;
+}
+
+.evaluation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.evaluation-grid .metric {
+  box-shadow: none;
+}
+
+.metric small {
+  color: var(--muted);
+}
+
+.confusion-details {
+  margin-top: 16px;
+}
+
+.confusion-details > summary {
+  cursor: pointer;
+  color: var(--brand);
+  font-weight: 750;
+}
+
+.compact-table {
+  margin-top: 10px;
+}
+
+.compact-table table {
+  min-width: 0;
+}
+
+.match-pill {
+  display: block;
+  width: max-content;
+  margin-top: 6px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.match-pill.match {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.match-pill.mismatch {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.match-pill.neutral {
+  background: #edf1ef;
+  color: #526159;
+}
+
+.comparison-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.comparison-heading h3 {
+  margin: 0;
+}
+
+.comparison-table td,
+.comparison-table th {
+  padding: 8px 10px;
+}
+
+.comparison-table .match-pill {
+  margin-top: 0;
+}
+
+@media (max-width: 850px) {
+  .evaluation-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .evaluation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

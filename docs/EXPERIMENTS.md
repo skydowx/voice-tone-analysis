@@ -4,20 +4,23 @@ The quality score is an internal promotion metric for this three-call smoke set.
 emotional tone (accuracy and observed-class macro F1); the balance covers the other required fields and
 confidence. It is useful for direction, not a hidden-set estimate.
 
-| Experiment | Model | Weighted quality | Tone accuracy | Tone macro F1 | Cost/audio min | Real-time factor | Decision |
-|---|---|---:|---:|---:|---:|---:|---|
-| baseline_direct | gemini-3.1-flash-lite | 0.428 | 33.3% | 0.222 | $0.000885 | 0.073 | not selected |
-| latent_v1 | gemini-3.1-flash-lite | 0.424 | 33.3% | 0.167 | $0.000947 | 0.071 | not selected |
-| speech_compact_v1 | gemini-3.1-flash-lite | 0.406 | 0.0% | 0.000 | $0.000799 | 0.060 | not selected |
-| dual_view_v1 | gemini-3.1-flash-lite | 0.406 | 0.0% | 0.000 | $0.001704 | 0.106 | not selected |
-| episodes_v1 | gemini-3.1-flash-lite | 0.349 | 0.0% | 0.000 | $0.000978 | 0.053 | not selected |
-| transcript_local_v1 | gemini-3.1-flash-lite | 0.526 | 33.3% | 0.333 | $0.001989 | 0.120 | not selected |
-| transcript_local_tagged_v1 | gemini-3.1-flash-lite | 0.492 | 33.3% | 0.333 | $0.002063 | 0.124 | not selected |
-| transcript_local_tagged_v2 | gemini-3.1-flash-lite | 0.492 | 33.3% | 0.333 | $0.002063 | 0.095 | not selected |
-| speaker_profiles_v1 | gemini-3.1-flash-lite | 0.379 | 0.0% | 0.000 | $0.001016 | 0.056 | not selected |
-| speaker_profiles_flash_v1 | gemini-3-flash-preview | 0.369 | 0.0% | 0.000 | $0.002092 | 0.058 | not selected |
-| transcript_local_profiles_v1 | gemini-3.1-flash-lite | 0.545 | 33.3% | 0.333 | $0.002085 | 0.097 | not selected |
-| final_v7 | gemini-3.1-flash-lite+gemini-3.1-flash-lite | 0.609 | 33.3% | 0.333 | $0.002085 | 0.101 | current best |
+| Experiment | Scope | Model | Weighted quality | Tone accuracy | Tone macro F1 | Cost/audio min | Real-time factor | Decision |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| baseline_direct | full schema | gemini-3.1-flash-lite | 0.428 | 33.3% | 0.222 | $0.000885 | 0.073 | historical candidate |
+| latent_v1 | full schema | gemini-3.1-flash-lite | 0.424 | 33.3% | 0.167 | $0.000947 | 0.071 | historical candidate |
+| speech_compact_v1 | full schema | gemini-3.1-flash-lite | 0.406 | 0.0% | 0.000 | $0.000799 | 0.060 | historical candidate |
+| dual_view_v1 | full schema | gemini-3.1-flash-lite | 0.406 | 0.0% | 0.000 | $0.001704 | 0.106 | historical candidate |
+| episodes_v1 | full schema | gemini-3.1-flash-lite | 0.349 | 0.0% | 0.000 | $0.000978 | 0.053 | historical candidate |
+| transcript_local_v1 | full schema | gemini-3.1-flash-lite | 0.526 | 33.3% | 0.333 | $0.001989 | 0.120 | historical candidate |
+| transcript_local_tagged_v1 | full schema | gemini-3.1-flash-lite | 0.492 | 33.3% | 0.333 | $0.002063 | 0.124 | historical candidate |
+| transcript_local_tagged_v2 | full schema | gemini-3.1-flash-lite | 0.492 | 33.3% | 0.333 | $0.002063 | 0.095 | historical candidate |
+| speaker_profiles_v1 | full schema | gemini-3.1-flash-lite | 0.379 | 0.0% | 0.000 | $0.001016 | 0.056 | historical candidate |
+| speaker_profiles_flash_v1 | full schema | gemini-3-flash-preview | 0.369 | 0.0% | 0.000 | $0.002092 | 0.058 | historical candidate |
+| transcript_local_profiles_v1 | full schema | gemini-3.1-flash-lite | 0.545 | 33.3% | 0.333 | $0.002085 | 0.097 | historical candidate |
+| final_v7 | full schema | gemini-3.1-flash-lite+gemini-3.1-flash-lite | 0.609 | 33.3% | 0.333 | $0.002085 | 0.101 | historical visible-set best; superseded for rubric fidelity |
+| spec_primary_v8 | full schema | gemini-3.1-flash-lite+gemini-3.1-flash-lite | 0.349 | 0.0% | 0.000 | $0.001919 | 0.215 | rejected: spec-aligned but visible-set regression |
+| spec_reconciled_v9 | full schema | gemini-3.1-flash-lite+gemini-3.1-flash-lite | 0.549 | 33.3% | 0.333 | $0.002109 | 0.543 | selected production behavior for rubric fidelity |
+| oss_emotion2vec_plus_base_v1 | emotional tone only | emotion2vec/emotion2vec_plus_base@b318240bfe67db81a8c572ecb37ce9c3759b81c9 | — | 33.3% | 0.167 | $0.000000 | 0.175 | rejected: role/domain mismatch and incomplete schema |
 
 ### baseline_direct
 
@@ -66,3 +69,15 @@ Two-pass Lite ensemble: ephemeral role-labelled transcript for local-only emotio
 ### final_v7
 
 Promoted two-pass Flash-Lite ensemble with ephemeral local-only transcript reconciliation, anonymous speaker profiles, calibrated single-profile confidence, and deterministic broadband-static detection
+
+### spec_primary_v8
+
+Predeclared spec-correction run: a dedicated whole-call customer-emotion pass uses the assessment definitions verbatim, while an independent anonymous speaker-profile pass handles environment fields; no transcript keyword override.
+
+### spec_reconciled_v9
+
+Spec-aligned production candidate: exact assessment tone definitions, anonymous speaker profiles, and conservative customer-only transcript reconciliation limited to explicit definition-level expressions; weak issue words cannot override audio evidence.
+
+### oss_emotion2vec_plus_base_v1
+
+Pinned local emotion2vec+ base challenger on CPU. Non-overlapping 30-second chunks were aggregated by duration, then the model's nine native SER labels were mapped to the five assessment tones before seeing results. It predicted neutral for all three calls. Rejected because it lacks customer diarization, misses upset and satisfied, and its custom model license needs production review.

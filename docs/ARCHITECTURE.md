@@ -15,7 +15,7 @@ SQLite batch/items ◄──────────── bounded background wo
                                       │
                          deterministic signal diagnostics
                                       │
-                    ┌──── Gemini ephemeral redacted turns ──► local emotion rules
+                    ┌──── Gemini ephemeral redacted turns ──► constrained emotion reconciliation
                     │                 (never persisted)
                     └──── Gemini anonymous voice profiles ──► role/overlap fields
                                       │
@@ -27,7 +27,8 @@ SQLite batch/items ◄──────────── bounded background wo
 ## Key choices
 
 The default makes two bounded `gemini-3.1-flash-lite` audio calls. The first produces a redacted role-labelled
-transcript that is reconciled locally and immediately discarded. The second returns anonymous per-voice
+transcript that is reconciled locally and immediately discarded. Only explicit expressions from the supplied
+tone definitions may override a profile; weak issue words cannot. The second returns anonymous per-voice
 behavior profiles and the non-emotion fields under a strict compact schema. This recovered the visible
 satisfied example and improved overlap without ever sending derived transcript text back to the provider.
 The provider remains behind an `InferenceProvider` protocol, so alternatives do not affect intake, jobs,
@@ -55,7 +56,8 @@ managed queue and idempotent worker service.
 - Noise type is short open text and is empty exactly when noise is absent.
 - A browser folder selection can flatten paths; nested folder manifests are rejected to keep name matching
   deterministic.
-- Visible labels are a smoke set only. Prompt changes must not overfit three examples.
+- Visible labels are a smoke set only. Prompt changes must not overfit three examples; spec fidelity takes
+  precedence over a small visible-score fluctuation.
 
 ## Known scaling boundary
 

@@ -3,7 +3,8 @@
 A production-shaped evaluation application for batch analysis of customer-service call audio. It
 accepts a ZIP or browser-selected folder containing audio plus `labels.csv`, validates the batch,
 processes valid files independently with a hybrid Gemini/local pipeline, shows progress and per-file errors,
-and exports the required `name,result_json` CSV.
+shows expected-versus-predicted matches and batch metrics when labels are supplied, and exports the required
+`name,result_json` CSV. Unlabelled hidden batches do not show an evaluation panel.
 
 ## Live assessment
 
@@ -66,7 +67,8 @@ Every prediction contains exactly:
   secure-cookie production guardrails, and optional PBKDF2 password hashes
 - Model/prompt version, measured duration/latency/token usage/cost, deterministic signal diagnostics, and
   downloadable CSV/JSON audit artifacts
-- Ephemeral redacted speaker-turn transcription for local-only customer-emotion reconciliation; transcript
+- Ephemeral redacted speaker-turn transcription for conservative customer-emotion reconciliation; weak
+  issue words cannot override the assessment's exact primary-tone definitions, and transcript
   text is never persisted, logged, displayed, or sent in a follow-up provider request
 - Anonymous per-voice behavior profiles for overlap and role confidence, plus local silence, signal-quality,
   and broadband-static detectors
@@ -89,6 +91,18 @@ reported as smoke evidence rather than a generalization claim.
 | `make live-eval` | Paid Gemini run on labelled clips, then score it |
 | `make evaluate` | Re-score existing prediction artifacts without API calls |
 | `make docker-up` | Build and launch the persistent local stack |
+
+The materially different OSS tone challenger is isolated from production dependencies. Reproduce it with
+`uv` and the CPU-only PyTorch index:
+
+```bash
+UV_CACHE_DIR=/tmp/autoace-uv-cache uv venv .venv-oss --python python3
+UV_CACHE_DIR=/tmp/autoace-uv-cache uv pip install --python .venv-oss/bin/python \
+  --index https://download.pytorch.org/whl/cpu torch==2.11.0 torchaudio==2.11.0
+UV_CACHE_DIR=/tmp/autoace-uv-cache uv pip install --python .venv-oss/bin/python \
+  -r requirements-oss-eval.txt
+HF_HUB_DOWNLOAD_TIMEOUT=300 .venv-oss/bin/python scripts/evaluate_oss_emotion.py
+```
 
 No audio, credentials, session data, or live inference artifacts are committed. See
 [docs/SECURITY.md](docs/SECURITY.md) before a public deployment.

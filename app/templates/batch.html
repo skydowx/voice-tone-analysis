@@ -9,6 +9,27 @@
   </div>
 </section>
 
+{% if evaluation %}
+<section class="evaluation-panel">
+  <div class="section-heading compact">
+    <div><p class="eyebrow">Label comparison</p><h2>Visible-set evaluation</h2></div>
+    <span class="status-pill neutral">{{ evaluation.sample_count }} labeled {{ 'file' if evaluation.sample_count == 1 else 'files' }}</span>
+  </div>
+  <p class="evaluation-note">Expected labels were supplied in the manifest. They are shown for review but are never sent to the model.</p>
+  <div class="evaluation-grid">
+    <div class="card metric"><span>Tone accuracy</span><strong>{{ '%.1f'|format(evaluation.emotional_tone_accuracy * 100) }}%</strong></div>
+    <div class="card metric"><span>Tone macro F1</span><strong>{{ '%.3f'|format(evaluation.emotional_tone_macro_f1_observed_classes) }}</strong><small>classes present in this batch</small></div>
+    <div class="card metric"><span>Exact schema match</span><strong>{{ '%.1f'|format(evaluation.exact_match_rate * 100) }}%</strong></div>
+    <div class="card metric"><span>Confidence MAE</span><strong>{{ '%.3f'|format(evaluation.confidence_mae) }}</strong></div>
+  </div>
+  <details class="confusion-details"><summary>View emotional-tone confusion matrix</summary>
+    <div class="table-shell compact-table"><table><thead><tr><th>Expected</th><th>Predicted</th><th>Count</th></tr></thead><tbody>
+      {% for row in evaluation.tone_confusion %}<tr><td>{{ row.expected }}</td><td>{{ row.predicted }}</td><td>{{ row.count }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </details>
+</section>
+{% endif %}
+
 <section class="summary-grid" data-batch-id="{{ batch.id }}" data-status="{{ batch.status }}">
   <div class="card metric"><span>Status</span><strong class="status-pill {{ batch.status }}">{{ batch.status|replace('_', ' ') }}</strong></div>
   <div class="card metric"><span>Progress</span><strong>{{ batch.completed + batch.failed }} / {{ batch.total }}</strong></div>
@@ -44,18 +65,29 @@
         <td><strong>{{ item.name }}</strong>{% if item.error %}<small class="row-error">{{ item.error }}</small>{% endif %}</td>
         <td><span class="status-pill {{ item.status }}">{{ item.status }}</span></td>
         {% if item.prediction %}
-        <td><span class="tone {{ item.prediction.emotional_tone }}">{{ item.prediction.emotional_tone }}</span><small>{{ item.prediction.emotional_intensity }}</small></td>
-        <td>{% if item.prediction.background_noise_present %}{{ item.prediction.background_noise_type }}<small>{{ item.prediction.background_noise_severity }}</small>{% else %}None{% endif %}</td>
-        <td>{{ item.prediction.audio_quality|replace('_', ' ') }}</td>
-        <td>{{ 'Yes' if item.prediction.speaker_overlap_present else 'No' }}</td>
-        <td><strong>{{ '%.2f'|format(item.prediction.confidence) }}</strong></td>
+        <td><span class="tone {{ item.prediction.emotional_tone }}">{{ item.prediction.emotional_tone }}</span><small>{{ item.prediction.emotional_intensity }}</small>{% if item.comparison %}<span class="match-pill {{ 'match' if item.comparison.fields.emotional_tone.match else 'mismatch' }}">{{ 'Match' if item.comparison.fields.emotional_tone.match else 'Expected ' ~ item.expected.emotional_tone }}</span>{% endif %}</td>
+        <td>{% if item.prediction.background_noise_present %}{{ item.prediction.background_noise_type }}<small>{{ item.prediction.background_noise_severity }}</small>{% else %}None{% endif %}{% if item.comparison %}<span class="match-pill {{ 'match' if item.comparison.fields.background_noise_present.match and item.comparison.fields.background_noise_type.match and item.comparison.fields.background_noise_severity.match else 'mismatch' }}">{{ 'Match' if item.comparison.fields.background_noise_present.match and item.comparison.fields.background_noise_type.match and item.comparison.fields.background_noise_severity.match else 'Differs' }}</span>{% endif %}</td>
+        <td>{{ item.prediction.audio_quality|replace('_', ' ') }}{% if item.comparison %}<span class="match-pill {{ 'match' if item.comparison.fields.audio_quality.match else 'mismatch' }}">{{ 'Match' if item.comparison.fields.audio_quality.match else 'Expected ' ~ (item.expected.audio_quality|replace('_', ' ')) }}</span>{% endif %}</td>
+        <td>{{ 'Yes' if item.prediction.speaker_overlap_present else 'No' }}{% if item.comparison %}<span class="match-pill {{ 'match' if item.comparison.fields.speaker_overlap_present.match else 'mismatch' }}">{{ 'Match' if item.comparison.fields.speaker_overlap_present.match else 'Expected ' ~ ('Yes' if item.expected.speaker_overlap_present else 'No') }}</span>{% endif %}</td>
+        <td><strong>{{ '%.2f'|format(item.prediction.confidence) }}</strong>{% if item.comparison %}<small>Expected {{ '%.2f'|format(item.expected.confidence) }} · Δ {{ '%.2f'|format(item.comparison.confidence_error) }}</small>{% endif %}</td>
         <td>${{ '%.6f'|format(item.cost_per_minute_usd or 0) }}</td>
         {% else %}
         <td colspan="6" class="muted">Waiting for a valid result</td>
         {% endif %}
       </tr>
       {% if item.prediction %}
-      <tr class="detail-row"><td colspan="8"><details><summary>View complete JSON and diagnostics</summary><div class="detail-grid"><pre>{{ item.prediction|tojson(indent=2) }}</pre><div><h3>Audit</h3><dl><dt>Model</dt><dd>{{ item.model }}</dd><dt>Latency</dt><dd>{{ item.latency_seconds }} s</dd><dt>Tokens</dt><dd>{{ item.input_tokens }} in · {{ item.output_tokens }} out · {{ item.thinking_tokens }} thinking</dd><dt>Audio duration</dt><dd>{{ item.duration_seconds }} s</dd></dl></div></div></details></td></tr>
+      <tr class="detail-row"><td colspan="8"><details><summary>View complete result{% if item.comparison %}, label comparison,{% endif %} and diagnostics</summary>
+        {% if item.comparison %}
+        <div class="comparison-heading"><h3>Expected vs predicted</h3><span class="match-pill {{ 'match' if item.comparison.exact_match else 'mismatch' }}">{{ item.comparison.matched_fields }} / {{ item.comparison.field_count }} categorical fields match</span></div>
+        <div class="table-shell compact-table"><table class="comparison-table"><thead><tr><th>Field</th><th>Expected</th><th>Predicted</th><th>Result</th></tr></thead><tbody>
+          {% for field, result in item.comparison.fields.items() %}
+          <tr><td><code>{{ field }}</code></td><td>{{ result.expected }}</td><td>{{ result.predicted }}</td><td><span class="match-pill {{ 'match' if result.match else 'mismatch' }}">{{ 'Match' if result.match else 'Mismatch' }}</span></td></tr>
+          {% endfor %}
+          <tr><td><code>confidence</code></td><td>{{ '%.2f'|format(item.expected.confidence) }}</td><td>{{ '%.2f'|format(item.prediction.confidence) }}</td><td><span class="match-pill neutral">MAE {{ '%.3f'|format(item.comparison.confidence_error) }}</span></td></tr>
+        </tbody></table></div>
+        {% endif %}
+        <div class="detail-grid"><div><h3>Prediction JSON</h3><pre>{{ item.prediction|tojson(indent=2) }}</pre>{% if item.expected %}<h3>Expected JSON</h3><pre>{{ item.expected|tojson(indent=2) }}</pre>{% endif %}</div><div><h3>Audit</h3><dl><dt>Model</dt><dd>{{ item.model }}</dd><dt>Latency</dt><dd>{{ item.latency_seconds }} s</dd><dt>Tokens</dt><dd>{{ item.input_tokens }} in · {{ item.output_tokens }} out · {{ item.thinking_tokens }} thinking</dd><dt>Audio duration</dt><dd>{{ item.duration_seconds }} s</dd></dl></div></div>
+      </details></td></tr>
       {% endif %}
     {% endfor %}
     </tbody>

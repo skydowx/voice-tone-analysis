@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from google.genai import types
 
-from app.services.inference.gemini import GeminiProvider
+from app.services.audio import AcousticFeatures
+from app.services.inference.gemini import GeminiProvider, _prompt
 
 
 def test_config_uses_json_schema_transport_without_legacy_response_schema(settings):
@@ -128,3 +129,32 @@ def test_transcript_profile_strategy_uses_profile_schema(settings):
     provider._settings = settings
     config = provider._config("gemini-3.1-flash-lite")
     assert config.response_json_schema["minItems"] == 8
+
+
+def test_emotion_profile_strategy_uses_profile_schema(settings):
+    settings.gemini_emotion_strategy = "emotion_profiles"
+    provider = GeminiProvider.__new__(GeminiProvider)
+    provider._types = types
+    provider._settings = settings
+    config = provider._config("gemini-3.1-flash-lite")
+    assert config.response_json_schema["minItems"] == 8
+
+
+def test_prompt_uses_primary_customer_tone_contract_without_peak_instruction():
+    features = AcousticFeatures(
+        duration_seconds=30.0,
+        rms_dbfs=-20.0,
+        peak_dbfs=-2.0,
+        clipping_ratio=0.0,
+        active_audio_ratio=0.9,
+        max_silence_seconds=1.0,
+        broadband_transient_seconds=0.0,
+        broadband_transient_bursts=0,
+        long_silence_present=False,
+        heuristic_audio_quality="clear",
+    )
+    prompt = _prompt(features)
+    normalized_prompt = " ".join(prompt.split())
+    assert "primary emotional tone expressed by the customer" in normalized_prompt
+    assert "clearest salient" not in prompt
+    assert "Frustrated means annoyed, impatient, or dissatisfied without strong anger" in normalized_prompt

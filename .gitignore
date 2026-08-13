@@ -1,6 +1,7 @@
 .env
 .agent-native/
 .venv/
+.venv-oss/
 .deps/
 __pycache__/
 *.py[cod]

@@ -19,7 +19,9 @@ The GitHub repository is private. Grant the named reviewers read access before s
 1. Sign in and upload a ZIP or select a folder whose root contains `labels.csv` and its referenced audio.
 2. Confirm the preflight summary, then start the batch. Valid files proceed independently; invalid entries
    show actionable errors without aborting valid siblings.
-3. Watch item-level progress, prediction fields, latency, cost, model/prompt version, and diagnostics.
+3. Watch item-level progress, prediction fields, latency, cost, model/prompt version, and diagnostics. For a
+   labelled manifest, review expected-versus-predicted badges, tone accuracy/macro F1, exact match,
+   confidence error, and the tone confusion matrix. These controls stay hidden for unlabelled batches.
 4. Download the required `name,result_json` CSV. JSON audit artifacts are also available.
 5. Compare the generated evaluation report and reproducible prediction artifact linked below.
 
@@ -30,21 +32,22 @@ The GitHub repository is private. Grant the named reviewers read access before s
 | Hosted, login-protected dashboard | Live URL above; authentication/session controls in `app/security.py` |
 | Runnable repository and setup | `README.md`, `.env.example`, `Makefile`, `Dockerfile`, Compose files |
 | Folder/ZIP batch input and manifest validation | `app/services/batch_validation.py`, upload integration tests |
-| Progress, independent errors, and download | `app/routes/batches.py`, templates, processor and route tests |
+| Progress, label comparison, independent errors, and download | `app/routes/batches.py`, templates, shared evaluator, processor and route tests |
 | Exact prediction contract | `app/schemas/prediction.py`; CSV sample in `artifacts/provided_predictions.csv` |
 | Technical memo and architecture | `docs/TECHNICAL_MEMO.md`, `docs/ARCHITECTURE.md` |
 | Validation metrics and confusion | `docs/EVALUATION.md`, `artifacts/evaluation.json`, `artifacts/provided_audit.json` |
-| Cost below $0.003/audio minute | $0.002085/min aggregate; $0.002619/min worst clip in the final run |
-| Measured latency | 24.12 seconds for 3.964 audio minutes (0.10x real time) |
+| Cost below $0.003/audio minute | $0.002109/min aggregate; $0.002680/min worst clip in the selected v9 run |
+| Measured latency | 129.17 seconds for 3.964 audio minutes (0.54x real time; one 88.59s provider outlier) |
 | Failure modes and next steps | `docs/TECHNICAL_MEMO.md`, `docs/EXPERIMENTS.md` |
 | Paid API/privacy disclosure | `docs/SECURITY.md` and the memo's external API section |
 
 ## Validation caveat
 
-The supplied set contains only three labelled calls. The final system scores 0.609 on the documented internal
-weighted metric, with 33.3% tone accuracy and observed-class macro F1 of 0.333. Noise presence/type/severity,
-quality, and silence are correct on all three examples; intensity and overlap are 66.7%. These are transparent
-smoke results, not a production estimate. The most valuable next input is a larger, independently labelled,
+The supplied set contains only three labelled calls. The spec-correct production candidate scores 0.549 on
+the documented internal weighted metric, with 33.3% tone accuracy and observed-class macro F1 of 0.333. A
+historical v7 run scored 0.609, but depended on an ambiguous salient-emotion instruction and weak lexical
+overrides, so it was superseded rather than promoted from n=3. These are transparent smoke results, not a
+production estimate. The most valuable next input is a larger, independently labelled,
 speaker-grouped validation set; the submission asks for additional examples instead of tuning further to the
 three visible calls.
 
@@ -68,8 +71,10 @@ the seven-day post-review deletion commitment are in [Security and privacy](SECU
 >
 > The repository includes setup instructions, the technical memo, reproducible evaluation artifacts, cost and
 > latency measurements, and the external-API/privacy disclosure. The supplied three-call set is useful as a
-> smoke test but too small for a trustworthy generalization estimate: the final weighted score is 0.609 and
-> tone remains the main risk. If you can share additional independently labelled examples—ideally covering
+> smoke test but too small for a trustworthy generalization estimate: the selected spec-correct run scores
+> 0.549, a historical run scored 0.609, and tone remains the main risk. A pinned local emotion2vec+ challenger
+> was also measured and rejected because it predicted neutral for all three calls and cannot isolate the
+> customer. If you can share additional independently labelled examples—ideally covering
 > all tone classes, speakers, channels, and noise conditions—I would use them as a held-out evaluation set
 > rather than tune against the visible three calls.
 >

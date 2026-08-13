@@ -30,6 +30,7 @@ def main() -> int:
             "transcript_local",
             "transcript_local_tagged",
             "transcript_local_profiles",
+            "emotion_profiles",
         ),
         default=None,
     )

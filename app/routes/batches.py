@@ -23,6 +23,7 @@ from app.services.batch_validation import (
     sanitize_filename,
     validate_batch_root,
 )
+from app.services.evaluation import compare_predictions, summarize_pairs
 
 
 router = APIRouter()
@@ -34,6 +35,13 @@ def _batch_context(request: Request, batch_id: str) -> dict:
     if not batch:
         raise HTTPException(404, "Batch not found")
     items = repository.list_items(batch_id)
+    labelled_pairs = []
+    for item in items:
+        if item["expected"] and item["prediction"]:
+            item["comparison"] = compare_predictions(item["expected"], item["prediction"])
+            labelled_pairs.append((item["expected"], item["prediction"]))
+        else:
+            item["comparison"] = None
     duration_minutes = max(float(batch["total_audio_seconds"]) / 60.0, 0.0)
     batch["cost_per_minute"] = (
         float(batch["total_cost_usd"]) / duration_minutes if duration_minutes else 0.0
@@ -41,6 +49,7 @@ def _batch_context(request: Request, batch_id: str) -> dict:
     return {
         "batch": batch,
         "items": items,
+        "evaluation": summarize_pairs(labelled_pairs),
         "csrf_token": ensure_csrf_token(request),
     }
 
@@ -153,7 +162,7 @@ async def batch_status(request: Request, batch_id: str):
     items = context["items"]
     for item in items:
         item.pop("path", None)
-    return JSONResponse({"batch": batch, "items": items})
+    return JSONResponse({"batch": batch, "items": items, "evaluation": context["evaluation"]})
 
 
 @router.get("/batches/{batch_id}/results.csv")

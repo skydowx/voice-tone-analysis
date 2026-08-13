@@ -35,6 +35,7 @@ class Settings(BaseSettings):
         "transcript_local",
         "transcript_local_tagged",
         "transcript_local_profiles",
+        "emotion_profiles",
     ] = "transcript_local_profiles"
     gemini_audio_view: Literal["full", "speech_compact", "dual"] = "full"
 

@@ -11,7 +11,20 @@ from app.services.inference.base import InferenceOutcome, Usage
 from app.services.transcript_emotion import analyze_transcript_emotion
 
 
-PROMPT_VERSION = "2026-08-12.v7"
+PROMPT_VERSION = "2026-08-13.v9"
+
+CUSTOMER_EMOTION_INSTRUCTION = """Analyze the entire call and identify the foreground CUSTOMER from
+conversational function, not voice order. Ignore the agent, television, radio, bystanders, and unrelated
+speech. Return the customer's primary emotional tone over the call using these assessment definitions:
+- neutral: no clear positive or negative emotion
+- satisfied: pleased, relieved, appreciative, or clearly positive
+- frustrated: annoyed, impatient, or dissatisfied without strong anger or distress
+- upset: clearly angry, agitated, or strongly dissatisfied
+- distressed: highly emotional, overwhelmed, panicked, crying, or otherwise emotionally escalated
+Return intensity as low for subtle or mild, medium for clear and sustained, or high for strong, escalated,
+or likely to require attention. Use wording and prosody together. Do not select the most intense isolated
+moment unless it represents the customer's primary tone. Do not infer emotion from loudness alone. Return
+only the requested structured array and no transcript or identifying details."""
 
 TRANSCRIPT_INSTRUCTION = """Create a concise speaker-turn transcript for internal classification.
 Infer CUSTOMER versus AGENT from conversational function. Mark television, radio, or unrelated people as
@@ -70,6 +83,33 @@ COMPACT_SCHEMA = {
     ],
     "minItems": 9,
     "maxItems": 9,
+}
+
+CUSTOMER_EMOTION_KEYS = (
+    "emotional_tone",
+    "emotional_intensity",
+    "role_certainty",
+    "emotion_confidence",
+)
+
+CUSTOMER_EMOTION_SCHEMA = {
+    "type": "array",
+    "prefixItems": [
+        {
+            "type": "string",
+            "enum": ["neutral", "satisfied", "frustrated", "upset", "distressed"],
+            "description": "primary emotional tone expressed by the customer over the call",
+        },
+        {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "strength of the customer's primary emotional tone",
+        },
+        {"type": "number", "minimum": 0, "maximum": 1, "description": "certainty customer was identified"},
+        {"type": "number", "minimum": 0, "maximum": 1, "description": "confidence in tone and intensity"},
+    ],
+    "minItems": 4,
+    "maxItems": 4,
 }
 
 LATENT_KEYS = (
@@ -137,7 +177,7 @@ EPISODE_SCHEMA = {
                     {
                         "type": "string",
                         "enum": ["neutral", "satisfied", "frustrated", "upset", "distressed"],
-                        "description": "customer tone in this episode",
+                        "description": "customer tone in this episode using the assessment definitions",
                     },
                     {"type": "string", "enum": ["low", "medium", "high"], "description": "episode intensity"},
                     {"type": "number", "minimum": 0, "maximum": 1, "description": "episode salience"},
@@ -182,8 +222,8 @@ SPEAKER_PROFILE_SCHEMA = {
             "items": {
                 "type": "array",
                 "prefixItems": [
-                    {"type": "string", "enum": ["neutral", "satisfied", "frustrated", "upset", "distressed"]},
-                    {"type": "string", "enum": ["low", "medium", "high"]},
+                    {"type": "string", "enum": ["neutral", "satisfied", "frustrated", "upset", "distressed"], "description": "primary tone of this voice over the call"},
+                    {"type": "string", "enum": ["low", "medium", "high"], "description": "strength of that primary tone"},
                     {
                         "type": "number",
                         "minimum": 0,
@@ -230,10 +270,13 @@ structured object and never return a transcript or identifying details."""
 
 
 def _prompt(features: AcousticFeatures) -> str:
-    return """Analyze the entire clip against the schema definitions. Use the customer's clearest salient
-emotion across the call, not simply the emotion occupying the most seconds. Appreciative, relieved, or
-clearly positive customer speech is satisfied; clear sustained anger or agitation is upset; frustration is
-the milder dissatisfied class. A calm customer can have medium intensity when that tone is sustained.
+    return """Analyze the entire clip against the assessment schema. The emotional_tone field is the primary
+emotional tone expressed by the customer over the call. Neutral means no clear positive or negative emotion.
+Satisfied means pleased, relieved, appreciative, or clearly positive. Frustrated means annoyed, impatient,
+or dissatisfied without strong anger or distress. Upset means clearly angry, agitated, or strongly
+dissatisfied. Distressed means highly emotional, overwhelmed, panicked, crying, or otherwise emotionally
+escalated. Low intensity is subtle or mild; medium is clear and sustained; high is strong, escalated, or
+likely to require attention. Do not choose an isolated peak merely because it is the strongest moment.
 
 Treat background TV/radio dialogue as noise and possible overlap, but never as the customer's emotion.
 Meaningful noise excludes faint codec artifacts. Describe only the dominant noise source. Technical audio
@@ -290,6 +333,7 @@ class GeminiProvider:
                 "episodes": EPISODE_SCHEMA,
                 "speaker_profiles": SPEAKER_PROFILE_SCHEMA,
                 "transcript_local_profiles": SPEAKER_PROFILE_SCHEMA,
+                "emotion_profiles": SPEAKER_PROFILE_SCHEMA,
             }.get(self._settings.gemini_emotion_strategy, COMPACT_SCHEMA),
         }
         return self._types.GenerateContentConfig(**kwargs)
@@ -456,6 +500,7 @@ class GeminiProvider:
                 response_model = selected_model
                 request_contents = contents
                 transcript: str | None = None
+                emotion_evidence: dict[str, float | str] | None = None
                 transcript_strategies = {
                     "transcript_local",
                     "transcript_local_tagged",
@@ -489,6 +534,38 @@ class GeminiProvider:
                         thinking_tokens=int(getattr(transcript_usage, "thoughts_token_count", 0) or 0),
                         total_tokens=int(getattr(transcript_usage, "total_token_count", 0) or 0),
                     )
+                elif self._settings.gemini_emotion_strategy == "emotion_profiles":
+                    emotion_response = self._client.models.generate_content(
+                        model=selected_model,
+                        contents=[contents[0], CUSTOMER_EMOTION_INSTRUCTION],
+                        config=self._types.GenerateContentConfig(
+                            system_instruction=SYSTEM_INSTRUCTION,
+                            temperature=0.0,
+                            max_output_tokens=128,
+                            thinking_config=self._types.ThinkingConfig(
+                                thinking_level=self._types.ThinkingLevel.MINIMAL,
+                                include_thoughts=False,
+                            ),
+                            response_mime_type="application/json",
+                            response_json_schema=CUSTOMER_EMOTION_SCHEMA,
+                        ),
+                    )
+                    if getattr(emotion_response, "parsed", None) is not None:
+                        raw_emotion = emotion_response.parsed
+                    elif emotion_response.text:
+                        raw_emotion = json.loads(emotion_response.text)
+                    else:
+                        raise ValueError("Gemini returned no structured customer-emotion output")
+                    if not isinstance(raw_emotion, (list, tuple)) or len(raw_emotion) != len(CUSTOMER_EMOTION_KEYS):
+                        raise ValueError("Gemini customer-emotion response did not match the compact contract")
+                    emotion_evidence = dict(zip(CUSTOMER_EMOTION_KEYS, raw_emotion))
+                    emotion_usage = getattr(emotion_response, "usage_metadata", None)
+                    prior_usage = Usage(
+                        input_tokens=int(getattr(emotion_usage, "prompt_token_count", 0) or 0),
+                        output_tokens=int(getattr(emotion_usage, "candidates_token_count", 0) or 0),
+                        thinking_tokens=int(getattr(emotion_usage, "thoughts_token_count", 0) or 0),
+                        total_tokens=int(getattr(emotion_usage, "total_token_count", 0) or 0),
+                    )
                 response = self._client.models.generate_content(
                     model=response_model,
                     contents=request_contents,
@@ -511,6 +588,7 @@ class GeminiProvider:
                     "episodes": len(EPISODE_KEYS),
                     "speaker_profiles": len(SPEAKER_PROFILE_KEYS),
                     "transcript_local_profiles": len(SPEAKER_PROFILE_KEYS),
+                    "emotion_profiles": len(SPEAKER_PROFILE_KEYS),
                 }.get(self._settings.gemini_emotion_strategy, len(COMPACT_KEYS))
                 if not isinstance(raw_prediction, (list, tuple)) or len(raw_prediction) != expected_length:
                     raise ValueError("Gemini response did not match the configured compact contract")
@@ -521,6 +599,7 @@ class GeminiProvider:
                 elif self._settings.gemini_emotion_strategy in {
                     "speaker_profiles",
                     "transcript_local_profiles",
+                    "emotion_profiles",
                 }:
                     prediction, diagnostics = self._prediction_from_speaker_profiles(raw_prediction)
                 else:
@@ -532,6 +611,21 @@ class GeminiProvider:
                 } and transcript is not None:
                     prediction, transcript_diagnostics = analyze_transcript_emotion(transcript, prediction)
                     diagnostics = {**(diagnostics or {}), **transcript_diagnostics}
+                if emotion_evidence is not None:
+                    emotion_data = prediction.model_dump()
+                    emotion_data["emotional_tone"] = emotion_evidence["emotional_tone"]
+                    emotion_data["emotional_intensity"] = emotion_evidence["emotional_intensity"]
+                    emotion_data["confidence"] = min(
+                        float(prediction.confidence),
+                        float(emotion_evidence["role_certainty"]),
+                        float(emotion_evidence["emotion_confidence"]),
+                    )
+                    prediction = Prediction.model_validate(emotion_data)
+                    diagnostics = {
+                        **(diagnostics or {}),
+                        "emotion_role_certainty": round(float(emotion_evidence["role_certainty"]), 3),
+                        "emotion_confidence": round(float(emotion_evidence["emotion_confidence"]), 3),
+                    }
                 usage_meta = getattr(response, "usage_metadata", None)
                 input_tokens = prior_usage.input_tokens + int(getattr(usage_meta, "prompt_token_count", 0) or 0)
                 output_tokens = prior_usage.output_tokens + int(getattr(usage_meta, "candidates_token_count", 0) or 0)
@@ -546,7 +640,7 @@ class GeminiProvider:
                     prediction=prediction,
                     model=(
                         f"{selected_model}+{response_model}"
-                        if self._settings.gemini_emotion_strategy in transcript_strategies
+                        if self._settings.gemini_emotion_strategy in transcript_strategies | {"emotion_profiles"}
                         else selected_model
                     ),
                     latency_seconds=time.perf_counter() - started,

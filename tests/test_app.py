@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import re
 import time
 import zipfile
@@ -30,12 +31,19 @@ async def login(client):
     assert response.status_code == 303
 
 
-def make_batch_zip(tmp_path) -> bytes:
+def make_batch_zip(tmp_path, *, expected: dict | None = None) -> bytes:
     audio = write_wav(tmp_path / "call.wav")
     archive_buffer = io.BytesIO()
     with zipfile.ZipFile(archive_buffer, "w") as archive:
         archive.write(audio, "evaluation/call.wav")
-        archive.writestr("evaluation/labels.csv", "name,result_json\ncall.wav,\n")
+        result_json = json.dumps(expected, separators=(",", ":")) if expected else ""
+        manifest = io.StringIO(newline="")
+        import csv
+
+        writer = csv.DictWriter(manifest, fieldnames=["name", "result_json"])
+        writer.writeheader()
+        writer.writerow({"name": "call.wav", "result_json": result_json})
+        archive.writestr("evaluation/labels.csv", manifest.getvalue())
     return archive_buffer.getvalue()
 
 
@@ -87,3 +95,54 @@ async def test_upload_ignores_empty_unused_file_picker(client, tmp_path):
     )
     assert response.status_code == 303
     assert response.headers["location"].startswith("/batches/")
+
+
+async def test_labelled_batch_displays_expected_matches_and_metrics(client, tmp_path):
+    await login(client)
+    dashboard = await client.get("/")
+    expected = {
+        "emotional_tone": "upset",
+        "emotional_intensity": "low",
+        "background_noise_present": False,
+        "background_noise_type": "",
+        "background_noise_severity": "none",
+        "audio_quality": "clear",
+        "speaker_overlap_present": False,
+        "long_silence_present": False,
+        "confidence": 0.82,
+    }
+    response = await client.post(
+        "/batches",
+        data={"csrf_token": csrf_from(dashboard)},
+        files={"files": ("evaluation.zip", make_batch_zip(tmp_path, expected=expected), "application/zip")},
+        follow_redirects=False,
+    )
+    batch_path = response.headers["location"]
+
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        payload = (await client.get(f"/api{batch_path}")).json()
+        if payload["batch"]["status"] == "complete":
+            break
+        await anyio.sleep(0.05)
+
+    assert payload["evaluation"]["sample_count"] == 1
+    assert payload["items"][0]["comparison"]["fields"]["emotional_tone"]["match"] is False
+    page = await client.get(batch_path)
+    assert "Visible-set evaluation" in page.text
+    assert "Expected upset" in page.text
+    assert "Expected vs predicted" in page.text
+
+
+async def test_unlabelled_batch_hides_label_comparison(client, tmp_path):
+    await login(client)
+    dashboard = await client.get("/")
+    response = await client.post(
+        "/batches",
+        data={"csrf_token": csrf_from(dashboard)},
+        files={"files": ("evaluation.zip", make_batch_zip(tmp_path), "application/zip")},
+        follow_redirects=False,
+    )
+    batch_path = response.headers["location"]
+    page = await client.get(batch_path)
+    assert "Visible-set evaluation" not in page.text

@@ -273,6 +273,73 @@
     },
     "cost_per_audio_minute_usd": 0.0020847541004284376,
     "real_time_factor": 0.10142490150983219,
-    "within_cost_ceiling": true
+    "within_cost_ceiling": true,
+    "decision": "historical visible-set best; superseded for rubric fidelity"
+  },
+  {
+    "id": "spec_primary_v8",
+    "recorded_at": "2026-08-13T12:54:51.038688+00:00",
+    "description": "Predeclared spec-correction run: a dedicated whole-call customer-emotion pass uses the assessment definitions verbatim, while an independent anonymous speaker-profile pass handles environment fields; no transcript keyword override.",
+    "model": "gemini-3.1-flash-lite+gemini-3.1-flash-lite",
+    "prompt_version": "2026-08-13.v8",
+    "assessment_quality_score": 0.3489,
+    "tone_accuracy": 0.0,
+    "tone_macro_f1_observed": 0.0,
+    "field_accuracy": {
+      "emotional_tone": 0.0,
+      "emotional_intensity": 0.3333333333333333,
+      "background_noise_present": 0.6666666666666666,
+      "background_noise_severity": 0.6666666666666666,
+      "audio_quality": 1.0,
+      "speaker_overlap_present": 0.6666666666666666,
+      "long_silence_present": 1.0,
+      "background_noise_type_normalized": 0.6666666666666666
+    },
+    "cost_per_audio_minute_usd": 0.0019186347181520428,
+    "real_time_factor": 0.21459294234383475,
+    "within_cost_ceiling": true,
+    "decision": "rejected: spec-aligned but visible-set regression"
+  },
+  {
+    "id": "spec_reconciled_v9",
+    "recorded_at": "2026-08-13T12:58:52.173797+00:00",
+    "description": "Spec-aligned production candidate: exact assessment tone definitions, anonymous speaker profiles, and conservative customer-only transcript reconciliation limited to explicit definition-level expressions; weak issue words cannot override audio evidence.",
+    "model": "gemini-3.1-flash-lite+gemini-3.1-flash-lite",
+    "prompt_version": "2026-08-13.v9",
+    "assessment_quality_score": 0.5489,
+    "tone_accuracy": 0.3333333333333333,
+    "tone_macro_f1_observed": 0.3333333333333333,
+    "field_accuracy": {
+      "emotional_tone": 0.3333333333333333,
+      "emotional_intensity": 0.6666666666666666,
+      "background_noise_present": 0.6666666666666666,
+      "background_noise_severity": 0.6666666666666666,
+      "audio_quality": 1.0,
+      "speaker_overlap_present": 0.6666666666666666,
+      "long_silence_present": 1.0,
+      "background_noise_type_normalized": 0.6666666666666666
+    },
+    "cost_per_audio_minute_usd": 0.0021089719602591646,
+    "real_time_factor": 0.5431107336413823,
+    "within_cost_ceiling": true,
+    "decision": "selected production behavior for rubric fidelity"
+  },
+  {
+    "id": "oss_emotion2vec_plus_base_v1",
+    "recorded_at": "2026-08-13T18:32:30+00:00",
+    "description": "Pinned local emotion2vec+ base challenger on CPU. Non-overlapping 30-second chunks were aggregated by duration, then the model's nine native SER labels were mapped to the five assessment tones before seeing results. It predicted neutral for all three calls. Rejected because it lacks customer diarization, misses upset and satisfied, and its custom model license needs production review.",
+    "model": "emotion2vec/emotion2vec_plus_base@b318240bfe67db81a8c572ecb37ce9c3759b81c9",
+    "prompt_version": null,
+    "scope": "emotional_tone_only",
+    "assessment_quality_score": null,
+    "tone_accuracy": 0.3333333333333333,
+    "tone_macro_f1_observed": 0.16666666666666666,
+    "field_accuracy": {
+      "emotional_tone": 0.3333333333333333
+    },
+    "cost_per_audio_minute_usd": 0.0,
+    "real_time_factor": 0.1754757446964941,
+    "within_cost_ceiling": true,
+    "decision": "rejected: role/domain mismatch and incomplete schema"
   }
 ]

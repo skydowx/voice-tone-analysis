@@ -1,0 +1,126 @@
+{
+  "experiment_id": "oss_emotion2vec_plus_base_v1",
+  "model": "emotion2vec/emotion2vec_plus_base",
+  "model_revision": "b318240bfe67db81a8c572ecb37ce9c3759b81c9",
+  "model_license": "custom model license; research challenger only, review before production use",
+  "scope": "whole-call emotional_tone challenger only; no customer diarization and no other schema fields",
+  "aggregation": "duration-weighted mean of non-overlapping 30-second utterance scores",
+  "label_mapping": {
+    "angry": "upset",
+    "disgusted": "frustrated",
+    "fearful": "distressed",
+    "happy": "satisfied",
+    "neutral": "neutral",
+    "other": "neutral",
+    "sad": "distressed",
+    "surprised": "neutral",
+    "unknown": "neutral"
+  },
+  "sample_count": 3,
+  "tone_accuracy": 0.3333333333333333,
+  "tone_macro_f1_observed": 0.16666666666666666,
+  "tone_per_class": {
+    "neutral": {
+      "precision": 0.3333333333333333,
+      "recall": 1.0,
+      "f1": 0.5
+    },
+    "satisfied": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "frustrated": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "upset": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "distressed": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    }
+  },
+  "cost_per_audio_minute_usd": 0.0,
+  "checkpoint_download_seconds_this_run": 0.02841888100010692,
+  "checkpoint_download_note": "Checkpoint was cached by the immediately preceding aborted whole-call run; the initial 1.12 GB pinned download took approximately 523 seconds and is excluded from inference latency.",
+  "model_load_seconds": 4.771330648000003,
+  "inference_latency_seconds": {
+    "total": 41.724952724000104,
+    "mean": 13.908317574666702
+  },
+  "runtime": {
+    "torch": "2.11.0+cpu",
+    "torchaudio": "2.11.0+cpu",
+    "funasr": "1.4.1",
+    "huggingface-hub": "1.4.1",
+    "soundfile": "0.13.1"
+  },
+  "items": [
+    {
+      "name": "call_001.ogg",
+      "expected_tone": "upset",
+      "native_label": "neutral",
+      "predicted_tone": "neutral",
+      "top_score": 0.9691959344485109,
+      "chunk_count": 2,
+      "latency_seconds": 5.797513045000414,
+      "native_scores": {
+        "neutral": 0.9691959344485109,
+        "happy": 0.02979356470118202,
+        "disgusted": 0.00043834091333644544,
+        "fearful": 0.00018453751876656272,
+        "other": 0.00014892195278280994,
+        "angry": 0.00013714493029517346,
+        "surprised": 4.247824904280495e-05,
+        "<unk>": 4.0968669927902044e-05,
+        "sad": 1.8073441496395952e-05
+      }
+    },
+    {
+      "name": "call_002.ogg",
+      "expected_tone": "neutral",
+      "native_label": "neutral",
+      "predicted_tone": "neutral",
+      "top_score": 0.9999879548194904,
+      "chunk_count": 2,
+      "latency_seconds": 5.825710109000283,
+      "native_scores": {
+        "neutral": 0.9999879548194904,
+        "other": 3.962970566102703e-06,
+        "happy": 1.91712402700958e-06,
+        "sad": 1.9138445874658684e-06,
+        "disgusted": 1.478414982406606e-06,
+        "<unk>": 1.262325676018395e-06,
+        "angry": 8.879193663038627e-07,
+        "fearful": 4.273802167102519e-07,
+        "surprised": 2.1502043528626417e-07
+      }
+    },
+    {
+      "name": "call_003.ogg",
+      "expected_tone": "satisfied",
+      "native_label": "neutral",
+      "predicted_tone": "neutral",
+      "top_score": 0.9972332303184273,
+      "chunk_count": 6,
+      "latency_seconds": 30.101729569999407,
+      "native_scores": {
+        "neutral": 0.9972332303184273,
+        "<unk>": 0.0008940098300896953,
+        "disgusted": 0.0008845200551429443,
+        "other": 0.0003935335457728164,
+        "sad": 0.0003799788476782559,
+        "angry": 0.00010961988933856721,
+        "happy": 7.23091574850077e-05,
+        "fearful": 3.0173648981490767e-05,
+        "surprised": 2.596274688495686e-06
+      }
+    }
+  ]
+}
