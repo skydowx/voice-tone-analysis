@@ -14,6 +14,8 @@
 - The emotion pass returns a redacted speaker-turn transcript to process memory. It is used only by local
   deterministic rules and is never stored, logged, displayed, or included in another provider request.
 - The UI never exposes server-side paths or the Gemini API key.
+- Optional PostHog telemetry is backend-only, personless, and property-allowlisted. It excludes audio,
+  transcripts, filenames, labels, predictions, credentials, raw errors, IP addresses, and browser capture.
 
 ## Data flow and retention
 
@@ -49,6 +51,13 @@ the application does not silently delete evidence during review. The deletion pr
 Current provider references: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing),
 [Gemini API terms](https://ai.google.dev/gemini-api/terms), and
 [zero data retention](https://ai.google.dev/gemini-api/docs/zdr).
+
+## PostHog disclosure
+
+When `POSTHOG_PROJECT_TOKEN` is configured, operational events containing only aggregate batch and deployment
+metadata are sent to PostHog Cloud US. No frontend SDK, autocapture, session replay, person profiles, GeoIP,
+call content, labels, or predictions are enabled. The complete event contract is documented in
+[Analytics](ANALYTICS.md). Remove the token to disable all PostHog requests.
 
 ## Before exposing publicly
 

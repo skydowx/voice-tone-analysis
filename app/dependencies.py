@@ -4,6 +4,7 @@ from fastapi import Request
 
 from app.config import Settings
 from app.repositories.batches import BatchRepository
+from app.services.analytics import AnalyticsSink
 from app.services.processor import BatchProcessor
 
 
@@ -17,3 +18,7 @@ def repository_from(request: Request) -> BatchRepository:
 
 def processor_from(request: Request) -> BatchProcessor:
     return request.app.state.processor
+
+
+def analytics_from(request: Request) -> AnalyticsSink:
+    return request.app.state.analytics

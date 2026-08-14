@@ -54,10 +54,14 @@ umask 077
 GEMINI_API_KEY="$(secret autoace-gemini-key)"
 EVALUATOR_PASSWORD="$(secret autoace-evaluator-password)"
 SESSION_SECRET="$(secret autoace-session-secret)"
+POSTHOG_PROJECT_TOKEN="$(secret autoace-posthog-token 2>/dev/null || true)"
 
 cat > /etc/autoace/app.env <<EOF
 APP_ENV=production
+APP_VERSION=${IMAGE_URI##*:}
 APP_DATA_DIR=/data
+POSTHOG_PROJECT_TOKEN=${POSTHOG_PROJECT_TOKEN}
+POSTHOG_HOST=https://us.i.posthog.com
 GEMINI_API_KEY=${GEMINI_API_KEY}
 GEMINI_MODEL=gemini-3.1-flash-lite
 GEMINI_MAX_OUTPUT_TOKENS=384
@@ -120,5 +124,5 @@ docker run --detach \
   --restart unless-stopped \
   caddy:2-alpine
 
-unset GEMINI_API_KEY EVALUATOR_PASSWORD SESSION_SECRET
+unset GEMINI_API_KEY EVALUATOR_PASSWORD SESSION_SECRET POSTHOG_PROJECT_TOKEN
 docker image prune --force

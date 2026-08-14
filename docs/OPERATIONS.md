@@ -8,6 +8,8 @@
 - On restart, in-flight items and batches are marked failed rather than left permanently “processing.”
 - On the GCP VM, inspect first-boot progress with `gcloud compute instances get-serial-port-output autoace-app
   --zone us-east1-b --project autoace-assessment`.
+- PostHog is optional and fail-open. Check for `application started`, `batch uploaded`, and `batch completed`
+  events after a release; absence of telemetry does not make the application unhealthy.
 
 ## Common failures
 
@@ -45,3 +47,4 @@ separately backed up. Delete any requested backup on the same schedule. Never co
 3. Confirm `docs/EVALUATION.md` cost remains below $0.003/audio minute
 4. Build the container and check `/healthz` plus a real ZIP upload
 5. Verify HTTPS, host allowlist, secure cookie, secret-manager values, and reviewer credentials
+6. Confirm the PostHog release event carries the immutable image tag and contains no call-level content

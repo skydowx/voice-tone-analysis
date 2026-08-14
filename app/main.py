@@ -16,6 +16,7 @@ from app.config import Settings, get_settings
 from app.repositories.batches import BatchRepository
 from app.routes import auth, batches
 from app.security import LoginRateLimiter
+from app.services.analytics import Analytics, AnalyticsSink
 from app.services.classifier import AudioClassifier
 from app.services.inference.base import InferenceProvider
 from app.services.inference.gemini import GeminiProvider
@@ -33,17 +34,25 @@ class UnavailableProvider:
         raise RuntimeError("GEMINI_API_KEY is not configured; live inference is unavailable")
 
 
-def create_app(settings: Settings | None = None, provider: InferenceProvider | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    provider: InferenceProvider | None = None,
+    analytics: AnalyticsSink | None = None,
+) -> FastAPI:
     settings = settings or get_settings()
     settings.ensure_directories()
+    if analytics is None:
+        analytics = Analytics(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.repository.recover_incomplete()
+        app.state.analytics.capture("application started")
         try:
             yield
         finally:
             app.state.processor.shutdown()
+            app.state.analytics.shutdown()
 
     app = FastAPI(
         title=settings.app_name,
@@ -55,13 +64,19 @@ def create_app(settings: Settings | None = None, provider: InferenceProvider | N
     base_dir = Path(__file__).resolve().parent
     app.mount("/static", StaticFiles(directory=base_dir / "static"), name="static")
     app.state.settings = settings
+    app.state.analytics = analytics
     app.state.templates = Jinja2Templates(directory=base_dir / "templates")
     app.state.repository = BatchRepository(settings.database_path)
     selected_provider = provider
     if selected_provider is None:
         selected_provider = GeminiProvider(settings) if settings.gemini_api_key else UnavailableProvider()
     app.state.classifier = AudioClassifier(selected_provider, settings)
-    app.state.processor = BatchProcessor(app.state.repository, app.state.classifier, settings)
+    app.state.processor = BatchProcessor(
+        app.state.repository,
+        app.state.classifier,
+        settings,
+        analytics=app.state.analytics,
+    )
     app.state.login_limiter = LoginRateLimiter()
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)

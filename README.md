@@ -21,7 +21,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
 cp .env.example .env
-# Add GEMINI_API_KEY and change the local evaluator password in .env
+# Add GEMINI_API_KEY, optionally add POSTHOG_PROJECT_TOKEN, and change the local evaluator password in .env
 make test
 make run
 ```
@@ -73,6 +73,7 @@ Every prediction contains exactly:
 - Anonymous per-voice behavior profiles for overlap and role confidence, plus local silence, signal-quality,
   and broadband-static detectors
 - Health/readiness endpoints, non-root container, persistent Compose volume, and deployment script
+- Optional privacy-limited PostHog deployment and batch telemetry with no browser capture or call content
 
 The generated evaluation report is in [docs/EVALUATION.md](docs/EVALUATION.md), the full experiment ledger
 is in [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md), the experiment narrative is in
@@ -81,6 +82,8 @@ is in [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md), the experiment narrative is in
 record in [artifacts/provided_audit.json](artifacts/provided_audit.json). Architecture, risks, deployment,
 and operational decisions are documented under `docs/`. The sample is only three calls, so its metrics are
 reported as smoke evidence rather than a generalization claim.
+
+The PostHog event and privacy contract is documented in [docs/ANALYTICS.md](docs/ANALYTICS.md).
 
 ## Commands
 

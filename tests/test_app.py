@@ -54,7 +54,7 @@ async def test_health_and_authentication(client):
     assert response.url.path == "/login"
 
 
-async def test_authenticated_batch_flow_and_download(client, tmp_path):
+async def test_authenticated_batch_flow_and_download(client, tmp_path, analytics):
     await login(client)
     dashboard = await client.get("/")
     response = await client.post(
@@ -79,6 +79,14 @@ async def test_authenticated_batch_flow_and_download(client, tmp_path):
     assert csv_response.status_code == 200
     assert csv_response.text.startswith("name,result_json")
     assert "call.wav" in csv_response.text
+    events = [event for event, _ in analytics.events]
+    assert "application started" in events
+    assert "batch uploaded" in events
+    assert "batch completed" in events
+    assert "results downloaded" in events
+    uploaded = next(properties for event, properties in analytics.events if event == "batch uploaded")
+    assert uploaded["total_items"] == 1
+    assert "name" not in uploaded
 
 
 async def test_upload_ignores_empty_unused_file_picker(client, tmp_path):

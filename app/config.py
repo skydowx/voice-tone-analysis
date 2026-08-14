@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -18,8 +18,12 @@ class Settings(BaseSettings):
 
     app_name: str = "AutoAce Audio Analysis"
     app_env: Literal["development", "test", "production"] = "development"
+    app_version: str = "development"
     app_data_dir: Path = Path("var")
     database_path: Path | None = None
+
+    posthog_project_token: SecretStr | None = None
+    posthog_host: AnyHttpUrl = AnyHttpUrl("https://us.i.posthog.com")
 
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.1-flash-lite"

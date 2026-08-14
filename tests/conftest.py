@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import struct
+import threading
 import wave
 from pathlib import Path
 
@@ -40,6 +41,20 @@ class StubProvider:
         )
 
 
+class RecordingAnalytics:
+    def __init__(self):
+        self.events: list[tuple[str, dict[str, object]]] = []
+        self.shutdown_called = False
+        self._lock = threading.Lock()
+
+    def capture(self, event: str, properties=None):
+        with self._lock:
+            self.events.append((event, dict(properties or {})))
+
+    def shutdown(self):
+        self.shutdown_called = True
+
+
 def write_wav(path: Path, seconds: float = 1.0, *, silence_after: float | None = None) -> Path:
     rate = 16_000
     frames = []
@@ -72,8 +87,13 @@ def settings(tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-async def client(settings: Settings):
-    app = create_app(settings=settings, provider=StubProvider())
+def analytics():
+    return RecordingAnalytics()
+
+
+@pytest.fixture
+async def client(settings: Settings, analytics: RecordingAnalytics):
+    app = create_app(settings=settings, provider=StubProvider(), analytics=analytics)
     transport = httpx.ASGITransport(app=app)
     async with app.router.lifespan_context(app):
         async with httpx.AsyncClient(

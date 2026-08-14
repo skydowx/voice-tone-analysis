@@ -30,9 +30,9 @@ deploy/gcp/provision.sh
 ```
 
 The script creates a temporary `<static-ip>.sslip.io` HTTPS hostname, so the deployment can be checked before
-DNS is changed. It stores the local Gemini key and generated application secrets in Secret Manager; their
-values are never placed in VM metadata or container images. Add an `A` record for the final hostname after
-the temporary health check succeeds.
+DNS is changed. It stores the local Gemini key, optional PostHog project token, and generated application
+secrets in Secret Manager; their values are never placed in VM metadata or container images. Add an `A`
+record for the final hostname after the temporary health check succeeds.
 
 The evaluator password is generated during first provisioning. Retrieve it locally with:
 
@@ -52,8 +52,10 @@ deploy/gcp/redeploy.sh
 
 The current assessment deployment is live at <https://autoace.omerkhalil.com> on an `e2-small` VM in
 `us-east1-b`, with Caddy-managed HTTPS and one application worker. The Gemini key, evaluator password, and
-session secret are stored in Secret Manager. Before sharing credentials, verify the API key belongs to an
-active-billing Cloud project so the paid-service data terms described in [Security](SECURITY.md) apply.
+session secret, and optional PostHog project token are stored in Secret Manager. The immutable container tag
+is exposed as `APP_VERSION` for the `application started` release event. Before sharing credentials, verify
+the API key belongs to an active-billing Cloud project so the paid-service data terms described in
+[Security](SECURITY.md) apply.
 
 ## Cloud Run smoke deployment
 
@@ -63,6 +65,7 @@ create Artifact Registry and these Secret Manager secrets:
 - `autoace-gemini-key`
 - `autoace-password-hash`
 - `autoace-session-secret`
+- `autoace-posthog-token` (optional; omit the Cloud Run secret mapping when analytics is disabled)
 
 Then set `GCP_PROJECT_ID` and optionally `GCP_REGION`. This path is included as an alternative but is not used
 for the assessment deployment because its ephemeral filesystem does not meet the review/retry requirement.

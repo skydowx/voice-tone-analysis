@@ -8,6 +8,7 @@ from pathlib import Path
 
 from app.config import Settings
 from app.repositories.batches import BatchRepository
+from app.services.analytics import AnalyticsSink, categorize_processing_error
 from app.services.classifier import AudioClassifier
 
 
@@ -15,10 +16,17 @@ logger = logging.getLogger(__name__)
 
 
 class BatchProcessor:
-    def __init__(self, repository: BatchRepository, classifier: AudioClassifier, settings: Settings):
+    def __init__(
+        self,
+        repository: BatchRepository,
+        classifier: AudioClassifier,
+        settings: Settings,
+        analytics: AnalyticsSink,
+    ):
         self.repository = repository
         self.classifier = classifier
         self.settings = settings
+        self.analytics = analytics
         self._threads: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()
 
@@ -37,6 +45,7 @@ class BatchProcessor:
             thread.start()
 
     def _run_batch(self, batch_id: str) -> None:
+        started = time.perf_counter()
         try:
             self.repository.start_batch(batch_id)
             items = self.repository.pending_items(batch_id)
@@ -52,6 +61,21 @@ class BatchProcessor:
                     except Exception:
                         logger.exception("Unhandled item failure", extra={"item_id": item["id"]})
         finally:
+            batch = self.repository.get_batch(batch_id)
+            if batch:
+                self.analytics.capture(
+                    "batch completed",
+                    {
+                        "batch_id": batch_id,
+                        "status": batch["status"],
+                        "total_items": batch["total"],
+                        "completed_items": batch["completed"],
+                        "failed_items": batch["failed"],
+                        "audio_seconds": round(float(batch["total_audio_seconds"]), 3),
+                        "estimated_cost_usd": round(float(batch["total_cost_usd"]), 8),
+                        "processing_seconds": round(time.perf_counter() - started, 3),
+                    },
+                )
             with self._lock:
                 self._threads.pop(batch_id, None)
 
@@ -75,3 +99,10 @@ class BatchProcessor:
         except Exception as exc:
             logger.warning("Item failed: %s", exc, extra={"item_id": item_id})
             self.repository.fail_item(item_id, str(exc))
+            self.analytics.capture(
+                "batch item failed",
+                {
+                    "batch_id": str(item["batch_id"]),
+                    "error_category": categorize_processing_error(exc),
+                },
+            )

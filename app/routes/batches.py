@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.status import HTTP_303_SEE_OTHER
 
-from app.dependencies import processor_from, repository_from, settings_from
+from app.dependencies import analytics_from, processor_from, repository_from, settings_from
 from app.security import ensure_csrf_token, require_login, verify_csrf
 from app.services.batch_validation import (
     BatchValidationError,
@@ -119,6 +119,16 @@ async def create_batch(
         issues = [*intake.errors, *intake.warnings]
         batch_name = f"Evaluation {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
         batch_id = repository_from(request).create_batch(batch_name, intake.items, issues)
+        analytics_from(request).capture(
+            "batch uploaded",
+            {
+                "batch_id": batch_id,
+                "total_items": len(intake.items),
+                "processable": intake.can_process,
+                "validation_error_count": len(intake.errors),
+                "validation_warning_count": len(intake.warnings),
+            },
+        )
         if intake.can_process:
             processor_from(request).submit(batch_id)
         else:
@@ -169,7 +179,8 @@ async def batch_status(request: Request, batch_id: str):
 async def download_csv(request: Request, batch_id: str):
     require_login(request)
     repository = repository_from(request)
-    if not repository.get_batch(batch_id):
+    batch = repository.get_batch(batch_id)
+    if not batch:
         raise HTTPException(404, "Batch not found")
     output = io.StringIO(newline="")
     writer = csv.DictWriter(output, fieldnames=["name", "result_json"])
@@ -183,6 +194,16 @@ async def download_csv(request: Request, batch_id: str):
                 else "",
             }
         )
+    analytics_from(request).capture(
+        "results downloaded",
+        {
+            "batch_id": batch_id,
+            "format": "csv",
+            "status": batch["status"],
+            "completed_items": batch["completed"],
+            "failed_items": batch["failed"],
+        },
+    )
     return Response(
         output.getvalue(),
         media_type="text/csv",
@@ -202,6 +223,16 @@ async def download_json(request: Request, batch_id: str):
         if item["error"]:
             row["error"] = item["error"]
         rows.append(row)
+    analytics_from(request).capture(
+        "results downloaded",
+        {
+            "batch_id": batch_id,
+            "format": "json",
+            "status": batch["status"],
+            "completed_items": batch["completed"],
+            "failed_items": batch["failed"],
+        },
+    )
     return Response(
         json.dumps(rows, indent=2),
         media_type="application/json",

@@ -80,6 +80,7 @@ secret_has_version() {
 ensure_secret autoace-gemini-key
 ensure_secret autoace-evaluator-password
 ensure_secret autoace-session-secret
+ensure_secret autoace-posthog-token
 
 if ! secret_has_version autoace-gemini-key; then
   GEMINI_API_KEY="$(sed -n 's/^GEMINI_API_KEY=//p' "${REPO_ROOT}/.env" | tail -n 1)"
@@ -102,6 +103,17 @@ fi
 if ! secret_has_version autoace-session-secret; then
   openssl rand -hex 32 | gcloud secrets versions add autoace-session-secret \
     --data-file=- --project "${PROJECT_ID}" >/dev/null
+fi
+
+if ! secret_has_version autoace-posthog-token; then
+  POSTHOG_PROJECT_TOKEN="$(sed -n 's/^POSTHOG_PROJECT_TOKEN=//p' "${REPO_ROOT}/.env" | tail -n 1)"
+  POSTHOG_PROJECT_TOKEN="${POSTHOG_PROJECT_TOKEN%\"}"
+  POSTHOG_PROJECT_TOKEN="${POSTHOG_PROJECT_TOKEN#\"}"
+  if [[ -n "${POSTHOG_PROJECT_TOKEN}" ]]; then
+    printf '%s' "${POSTHOG_PROJECT_TOKEN}" | gcloud secrets versions add autoace-posthog-token \
+      --data-file=- --project "${PROJECT_ID}" >/dev/null
+  fi
+  unset POSTHOG_PROJECT_TOKEN
 fi
 
 echo "Building ${IMAGE_URI}..."
