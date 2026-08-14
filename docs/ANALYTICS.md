@@ -31,17 +31,15 @@ across subdomains.
 
 Before replay data leaves the browser:
 
-- every input value and every text node is masked;
+- password inputs are masked while ordinary text and non-password inputs remain visible;
 - URL query strings are stripped;
-- the login form, CSRF inputs, selected filenames, batch history, evaluation metrics, expected/predicted
-  outputs, validation messages, and result tables use `ph-no-capture` and become opaque placeholders;
+- hidden CSRF inputs use `ph-no-capture` and become opaque placeholders;
 - call audio and transcripts never enter the page and therefore cannot be recorded.
 
-The masked replay is intended to answer flow questions such as whether upload selection, submission,
-navigation, and progress updates behaved as expected. It is deliberately unsuitable for inspecting the
-reviewer's credentials, filenames, assessment labels, or model output. A visible footer notice indicates when
-replay is active. To disable replay while retaining server events, set `POSTHOG_SESSION_REPLAY=false` and
-restart. Remove the project token to disable both.
+The replay is intended to show the complete assessment flow, including file selection, submission,
+navigation, progress, labels, and model output. Passwords and hidden security values remain unavailable. A
+visible footer notice indicates when replay is active. To disable replay while retaining server events, set
+`POSTHOG_SESSION_REPLAY=false` and restart. Remove the project token to disable both.
 
 The reverse proxy's content-security policy permits the local loader and PostHog's script/connect/worker
 origins while retaining same-origin defaults for the rest of the application.

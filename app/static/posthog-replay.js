@@ -65,8 +65,10 @@
     person_profiles: "identified_only",
     respect_dnt: true,
     session_recording: {
-      maskAllInputs: true,
-      maskTextSelector: "*",
+      maskAllInputs: false,
+      maskInputOptions: {
+        password: true,
+      },
       maskCapturedNetworkRequestFn: function redactUrl(request) {
         if (request.name) {
           request.name = request.name.split("?")[0];

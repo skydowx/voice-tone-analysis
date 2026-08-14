@@ -31,7 +31,7 @@
     <main>{% block content %}{% endblock %}</main>
     <footer>
       Confidential evaluation workspace · Audio and transcripts are never written to application logs.
-      {% if posthog_session_replay %}Privacy-masked session replay is enabled.{% endif %}
+      {% if posthog_session_replay %}Password-masked session replay is enabled.{% endif %}
     </footer>
     {% block scripts %}{% endblock %}
   </body>

@@ -15,8 +15,8 @@
   deterministic rules and is never stored, logged, displayed, or included in another provider request.
 - The UI never exposes server-side paths or the Gemini API key.
 - Optional PostHog operational telemetry is personless and property-allowlisted. Optional browser replay
-  masks every input and text node and blocks credential, filename, label, prediction, validation, and result
-  regions before capture; browser behavioral autocapture and console/error/performance capture are disabled.
+  masks password inputs and blocks hidden CSRF values while leaving ordinary assessment UI visible; browser
+  behavioral autocapture and console/error/performance capture are disabled.
 
 ## Data flow and retention
 
@@ -57,11 +57,12 @@ Current provider references: [Gemini API pricing](https://ai.google.dev/gemini-a
 
 When `POSTHOG_PROJECT_TOKEN` is configured, operational events containing only aggregate batch and deployment
 metadata are sent to PostHog Cloud US. The assessment VM also sets `POSTHOG_SESSION_REPLAY=true`, which sends
-maximally masked DOM snapshots and replay timing data. It does not send input values or readable page text;
-sensitive page regions are excluded entirely. Autocapture, console recording, browser error capture,
-performance capture, person identification, and cross-subdomain identity are disabled. The complete event and
-replay contract is documented in [Analytics](ANALYTICS.md). Set the replay flag to false to retain only server
-events, or remove the token to disable all PostHog requests.
+DOM snapshots and replay timing data. Password inputs are masked and hidden CSRF values are excluded; ordinary
+text, non-password inputs, filenames, labels, predictions, and validation details are visible in replay.
+Autocapture, console recording, browser error capture, performance capture, person identification, and
+cross-subdomain identity are disabled. The complete event and replay contract is documented in
+[Analytics](ANALYTICS.md). Set the replay flag to false to retain only server events, or remove the token to
+disable all PostHog requests.
 
 ## Before exposing publicly
 
