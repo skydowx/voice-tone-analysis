@@ -73,7 +73,8 @@ Every prediction contains exactly:
 - Anonymous per-voice behavior profiles for overlap and role confidence, plus local silence, signal-quality,
   and broadband-static detectors
 - Health/readiness endpoints, non-root container, persistent Compose volume, and deployment script
-- Optional privacy-limited PostHog deployment and batch telemetry with no browser capture or call content
+- Optional privacy-limited PostHog operational events plus maximally masked session replay; credentials,
+  filenames, labels, predictions, validation details, audio, and transcripts are excluded
 
 The generated evaluation report is in [docs/EVALUATION.md](docs/EVALUATION.md), the full experiment ledger
 is in [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md), the experiment narrative is in

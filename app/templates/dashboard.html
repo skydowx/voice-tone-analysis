@@ -8,7 +8,7 @@
 {% if upload_error %}<div class="alert danger">{{ upload_error }}</div>{% endif %}
 
 <form class="card upload-card" method="post" action="/batches" enctype="multipart/form-data" id="upload-form">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input class="ph-no-capture" type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <div class="drop-zone" id="drop-zone">
     <div class="upload-icon">↑</div>
     <h2>Drop an evaluation ZIP here</h2>
@@ -19,13 +19,13 @@
     </div>
     <small>Include <strong>labels.csv</strong> and all audio files at the ZIP or folder root · Supported audio: OGG/Opus, WAV, MP3, AAC, FLAC, M4A, MP4 and WebM · {{ settings.max_batch_files }} files maximum</small>
   </div>
-  <div class="selected-files" id="selected-files" hidden></div>
+  <div class="selected-files ph-no-capture" id="selected-files" hidden></div>
   <button class="button primary" id="analyze-button" type="submit" disabled>Validate and analyze</button>
 </form>
 
 <section class="section-heading"><div><p class="eyebrow">History</p><h2>Recent batches</h2></div></section>
 {% if batches %}
-<div class="batch-grid">
+<div class="batch-grid ph-no-capture">
   {% for batch in batches %}
   <a class="card batch-card" href="/batches/{{ batch.id }}">
     <div class="batch-card-top"><strong>{{ batch.name }}</strong><span class="status-pill {{ batch.status }}">{{ batch.status|replace('_', ' ') }}</span></div>

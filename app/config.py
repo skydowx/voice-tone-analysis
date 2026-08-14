@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     posthog_project_token: SecretStr | None = None
     posthog_host: AnyHttpUrl = AnyHttpUrl("https://us.i.posthog.com")
+    posthog_session_replay: bool = False
 
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.1-flash-lite"

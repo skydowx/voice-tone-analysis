@@ -5,11 +5,16 @@ import json
 import re
 import time
 import zipfile
+from pathlib import Path
 
 import anyio
+import httpx
 import pytest
+from pydantic import SecretStr
 
-from .conftest import write_wav
+from app.main import create_app
+
+from .conftest import RecordingAnalytics, StubProvider, write_wav
 
 
 pytestmark = pytest.mark.anyio
@@ -52,6 +57,31 @@ async def test_health_and_authentication(client):
     response = await client.get("/")
     assert response.status_code == 200
     assert response.url.path == "/login"
+    assert "posthog-replay.js" not in response.text
+
+
+async def test_session_replay_is_opt_in_and_maximally_masked(settings):
+    settings.posthog_project_token = SecretStr("phc_test_public_project_token")
+    settings.posthog_session_replay = True
+    app = create_app(settings=settings, provider=StubProvider(), analytics=RecordingAnalytics())
+    transport = httpx.ASGITransport(app=app)
+
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as replay_client:
+            login_page = await replay_client.get("/login")
+    replay_script = (Path(__file__).parents[1] / "app/static/posthog-replay.js").read_text()
+
+    assert login_page.status_code == 200
+    assert 'src="http://testserver/static/posthog-replay.js"' in login_page.text
+    assert 'data-posthog-token="phc_test_public_project_token"' in login_page.text
+    assert 'class="card auth-card ph-no-capture"' in login_page.text
+    assert "Privacy-masked session replay is enabled." in login_page.text
+    assert "autocapture: false" in replay_script
+    assert "capture_pageview: false" in replay_script
+    assert "enable_recording_console_log: false" in replay_script
+    assert "maskAllInputs: true" in replay_script
+    assert 'maskTextSelector: "*"' in replay_script
+    assert 'request.name.split("?")[0]' in replay_script
 
 
 async def test_authenticated_batch_flow_and_download(client, tmp_path, analytics):

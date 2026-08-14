@@ -62,6 +62,7 @@ APP_VERSION=${IMAGE_URI##*:}
 APP_DATA_DIR=/data
 POSTHOG_PROJECT_TOKEN=${POSTHOG_PROJECT_TOKEN}
 POSTHOG_HOST=https://us.i.posthog.com
+POSTHOG_SESSION_REPLAY=true
 GEMINI_API_KEY=${GEMINI_API_KEY}
 GEMINI_MODEL=gemini-3.1-flash-lite
 GEMINI_MAX_OUTPUT_TOKENS=384
@@ -84,6 +85,7 @@ ${PUBLIC_HOST}, ${DOMAIN} {
         Referrer-Policy "no-referrer"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://*.posthog.com; connect-src 'self' https://*.posthog.com; worker-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     }
     reverse_proxy autoace-app:8080
 }

@@ -10,7 +10,7 @@
 </section>
 
 {% if evaluation %}
-<section class="evaluation-panel">
+<section class="evaluation-panel ph-no-capture">
   <div class="section-heading compact">
     <div><p class="eyebrow">Label comparison</p><h2>Visible-set evaluation</h2></div>
     <span class="status-pill neutral">{{ evaluation.sample_count }} labeled {{ 'file' if evaluation.sample_count == 1 else 'files' }}</span>
@@ -47,7 +47,7 @@
 {% endif %}
 
 {% if batch.validation %}
-<section class="card validation-card">
+<section class="card validation-card ph-no-capture">
   <div class="section-heading compact"><div><p class="eyebrow">Intake report</p><h2>Validation findings</h2></div><span class="status-pill neutral">{{ batch.validation|length }}</span></div>
   {% for issue in batch.validation %}
   <div class="validation-row"><strong>{{ issue.name }}</strong><span>{{ issue.message }}</span><code>{{ issue.code }}</code></div>
@@ -56,7 +56,7 @@
 {% endif %}
 
 <section class="section-heading"><div><p class="eyebrow">Structured output</p><h2>Files</h2></div></section>
-<div class="card table-shell">
+<div class="card table-shell ph-no-capture">
   <table>
     <thead><tr><th>Filename</th><th>Status</th><th>Tone</th><th>Noise</th><th>Quality</th><th>Overlap</th><th>Confidence</th><th>Cost/min</th></tr></thead>
     <tbody>

@@ -66,6 +66,14 @@ def create_app(
     app.state.settings = settings
     app.state.analytics = analytics
     app.state.templates = Jinja2Templates(directory=base_dir / "templates")
+    posthog_project_token = (
+        settings.posthog_project_token.get_secret_value() if settings.posthog_project_token else ""
+    )
+    app.state.templates.env.globals.update(
+        posthog_session_replay=bool(settings.posthog_session_replay and posthog_project_token),
+        posthog_project_token=posthog_project_token,
+        posthog_host=str(settings.posthog_host).rstrip("/"),
+    )
     app.state.repository = BatchRepository(settings.database_path)
     selected_provider = provider
     if selected_provider is None:

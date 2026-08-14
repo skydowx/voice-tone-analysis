@@ -12,7 +12,7 @@
       <li>Measured cost and latency</li>
     </ul>
   </div>
-  <form class="card auth-card" method="post" action="/login">
+  <form class="card auth-card ph-no-capture" method="post" action="/login">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div><p class="eyebrow">Evaluator access</p><h2>Sign in</h2></div>
     {% if error %}<div class="alert danger">{{ error }}</div>{% endif %}

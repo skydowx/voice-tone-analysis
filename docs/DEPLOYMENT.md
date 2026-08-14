@@ -57,6 +57,11 @@ is exposed as `APP_VERSION` for the `application started` release event. Before 
 the API key belongs to an active-billing Cloud project so the paid-service data terms described in
 [Security](SECURITY.md) apply.
 
+The VM startup configuration enables privacy-masked PostHog session replay. Set
+`POSTHOG_SESSION_REPLAY=false` in `/etc/autoace/app.env` and restart the application container to disable
+browser replay while retaining server-side operational events. The committed startup script will restore the
+documented setting on the next redeploy.
+
 ## Cloud Run smoke deployment
 
 `deploy/cloudrun.sh` builds and deploys a single instance with background CPU enabled. Before running it,

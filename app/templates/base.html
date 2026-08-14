@@ -6,6 +6,14 @@
     <title>{% block title %}AutoAce Audio Analysis{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/evaluation.css') }}">
+    {% if posthog_session_replay %}
+    <script
+      src="{{ url_for('static', path='/posthog-replay.js') }}"
+      data-posthog-token="{{ posthog_project_token }}"
+      data-posthog-host="{{ posthog_host }}"
+      defer
+    ></script>
+    {% endif %}
   </head>
   <body>
     <header class="topbar">
@@ -14,14 +22,17 @@
       <nav>
         <a href="/">Batches</a>
         <form action="/logout" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input class="ph-no-capture" type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button class="button ghost" type="submit">Sign out</button>
         </form>
       </nav>
       {% endif %}
     </header>
     <main>{% block content %}{% endblock %}</main>
-    <footer>Confidential evaluation workspace · Audio and transcripts are never written to application logs.</footer>
+    <footer>
+      Confidential evaluation workspace · Audio and transcripts are never written to application logs.
+      {% if posthog_session_replay %}Privacy-masked session replay is enabled.{% endif %}
+    </footer>
     {% block scripts %}{% endblock %}
   </body>
 </html>

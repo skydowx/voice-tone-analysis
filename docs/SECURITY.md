@@ -14,8 +14,9 @@
 - The emotion pass returns a redacted speaker-turn transcript to process memory. It is used only by local
   deterministic rules and is never stored, logged, displayed, or included in another provider request.
 - The UI never exposes server-side paths or the Gemini API key.
-- Optional PostHog telemetry is backend-only, personless, and property-allowlisted. It excludes audio,
-  transcripts, filenames, labels, predictions, credentials, raw errors, IP addresses, and browser capture.
+- Optional PostHog operational telemetry is personless and property-allowlisted. Optional browser replay
+  masks every input and text node and blocks credential, filename, label, prediction, validation, and result
+  regions before capture; browser behavioral autocapture and console/error/performance capture are disabled.
 
 ## Data flow and retention
 
@@ -55,9 +56,12 @@ Current provider references: [Gemini API pricing](https://ai.google.dev/gemini-a
 ## PostHog disclosure
 
 When `POSTHOG_PROJECT_TOKEN` is configured, operational events containing only aggregate batch and deployment
-metadata are sent to PostHog Cloud US. No frontend SDK, autocapture, session replay, person profiles, GeoIP,
-call content, labels, or predictions are enabled. The complete event contract is documented in
-[Analytics](ANALYTICS.md). Remove the token to disable all PostHog requests.
+metadata are sent to PostHog Cloud US. The assessment VM also sets `POSTHOG_SESSION_REPLAY=true`, which sends
+maximally masked DOM snapshots and replay timing data. It does not send input values or readable page text;
+sensitive page regions are excluded entirely. Autocapture, console recording, browser error capture,
+performance capture, person identification, and cross-subdomain identity are disabled. The complete event and
+replay contract is documented in [Analytics](ANALYTICS.md). Set the replay flag to false to retain only server
+events, or remove the token to disable all PostHog requests.
 
 ## Before exposing publicly
 
